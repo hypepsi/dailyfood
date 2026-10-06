@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Egg, Flame, Percent, Ruler, Scale } from "lucide-react";
+import { Flame, Percent, Ruler, Scale, Trophy } from "lucide-react";
 import { BigStat, Card, StatRow } from "@/components/Card";
 import { TrendChart } from "@/components/TrendChart";
 import { requireUser } from "@/lib/session";
@@ -8,6 +8,8 @@ import { rollingAverage, trendPerWeek, type DailyValue } from "@/lib/weight";
 import { getDailyTotals, getFirstMealDate, todayFor } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
 import { goalsForDate } from "@/services/profile";
+import { getDeficitSummary } from "@/services/snapshot";
+import { fatGrams } from "@/lib/energy";
 
 const RANGES = [
   { key: "7", label: "7天", days: 7 },
@@ -17,6 +19,10 @@ const RANGES = [
 ] as const;
 
 const signed = (n: number, digits = 1) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
+function fatText(deficit: number): string {
+  const g = Math.abs(fatGrams(deficit));
+  return g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g} g`;
+}
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
 
 export default async function TrendsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
@@ -44,9 +50,11 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   // 图上画出今天，但平均值和达标天数不算今天：今天还没吃完，算进去会偏低
   const complete = intake.filter((d) => d.date < today);
   const avgKcal = mean(complete.map((d) => d.kcal));
-  const avgProtein = mean(complete.map((d) => d.proteinG));
   const withinTarget = complete.filter((d) => d.kcal <= goals.calorieTarget).length;
-  const proteinHit = complete.filter((d) => d.proteinG >= goals.proteinTargetG).length;
+
+  const deficit = getDeficitSummary(user, today);
+  const deficitDays = (deficit?.days ?? []).filter((d) => d.date >= from);
+  const deficitTotal = deficitDays.reduce((s, d) => s + d.deficit, 0);
 
   const bodyFat = inRange(allBodyFat);
   const waist = inRange(allWaist);
@@ -128,26 +136,38 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
           )}
         </Card>
 
-        {intake.length > 0 && (
-          <Card icon={Egg} title="蛋白质">
-            <BigStat label="平均每日摄入" value={avgProtein === null ? "—" : `${Math.round(avgProtein)}`} unit="g" />
-            <div className="mt-2">
-              <TrendChart
-                kind="bar"
-                {...chartRange}
-                unit="g"
-                primary={{ label: "蛋白质", points: intake.map((d) => ({ date: d.date, value: Math.round(d.proteinG) })) }}
-                target={{ label: "目标", value: goals.proteinTargetG }}
+        <Card icon={Trophy} title="热量差">
+          {deficitDays.length === 0 ? (
+            <p className="py-2 text-muted">{deficit ? "这段时间还没有吃完并记录的日子" : "上传一次体脂秤报告并填好个人资料后，这里会显示每天的热量差"}</p>
+          ) : (
+            <>
+              <BigStat
+                label={deficitTotal >= 0 ? "这段时间累计热量差" : "这段时间累计多吃了"}
+                value={Math.abs(deficitTotal).toLocaleString("en-US")}
+                unit="kcal"
+                tone={deficitTotal >= 0 ? "accent" : "warn"}
+                sub={deficitTotal > 0 ? <span className="font-semibold text-accent">≈ 少了 {fatText(deficitTotal)} 脂肪</span> : null}
               />
-            </div>
-            <StatRow
-              stats={[
-                { label: "达标天数", value: `${proteinHit} / ${complete.length}` },
-                { label: "目标", value: `${goals.proteinTargetG} g` },
-              ]}
-            />
-          </Card>
-        )}
+              <div className="mt-2">
+                <TrendChart
+                  kind="bar"
+                  {...chartRange}
+                  unit="kcal"
+                  primary={{ label: "热量差", points: deficitDays.map((d) => ({ date: d.date, value: d.deficit })) }}
+                  diverging={{ positive: "有缺口", negative: "吃超了" }}
+                />
+              </div>
+              <StatRow
+                stats={[
+                  { label: "日均热量差", value: signed(Math.round(deficitTotal / deficitDays.length), 0) },
+                  { label: "有缺口", value: `${deficitDays.filter((d) => d.deficit > 0).length} 天` },
+                  { label: "吃超了", value: `${deficitDays.filter((d) => d.deficit < 0).length} 天` },
+                ]}
+              />
+              <p className="mt-3 text-xs text-faint">只统计有饮食记录的日子；今天吃完后才计入</p>
+            </>
+          )}
+        </Card>
 
         {bodyFat.length > 0 && (
           <Card icon={Percent} title="体脂率">

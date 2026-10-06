@@ -115,6 +115,8 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
     deficitAtTarget: day.burn - goals.calorieTarget,
     week: { days: week.length, total: sum(week) },
     allTime: { days: logged.length, total: sum(logged) },
+    /** 每个计入累计的日子（有饮食记录、且已经吃完），按日期升序，供趋势图使用 */
+    days: logged.sort((a, b) => a.date.localeCompare(b.date)),
     streak: loggingStreak(new Set(intakeByDate.keys()), local.date, (d) => addDays(d, -1)),
   };
 }

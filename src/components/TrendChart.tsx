@@ -16,6 +16,8 @@ type Props = {
   target?: { label: string; value: number };
   unit: string;
   digits?: number;
+  /** 柱状图有正有负时使用：正值向上（主色），负值向下（警示色）。传入正负两种情况的叫法 */
+  diverging?: { positive: string; negative: string };
 };
 
 const W = 340;
@@ -39,21 +41,25 @@ function niceTicks(min: number, max: number): number[] {
 }
 
 /** 趋势页通用图表：单一纵轴，悬停/按住显示当日数值 */
-export function TrendChart({ kind, from, to, primary, secondary, target, unit, digits = 0 }: Props) {
+export function TrendChart({ kind, from, to, primary, secondary, target, unit, digits = 0, diverging }: Props) {
   const [hover, setHover] = useState<string | null>(null);
   const days = Math.max(1, dayIndex(from, to));
   const all = [...primary.points, ...(secondary?.points ?? [])];
   if (all.length === 0) return <p className="py-8 text-center text-sm text-faint">这段时间还没有数据</p>;
 
   const values = all.map((p) => p.value).concat(target ? [target.value] : []);
-  let yMin = kind === "bar" ? 0 : Math.min(...values);
-  let yMax = Math.max(...values);
+  // 柱状图的纵轴必须包含 0；有负值时向下延伸
+  let yMin = kind === "bar" ? Math.min(0, ...values) : Math.min(...values);
+  let yMax = kind === "bar" ? Math.max(0, ...values) : Math.max(...values);
   if (kind === "line") {
     const pad = Math.max((yMax - yMin) * 0.15, yMax * 0.005, 0.2);
     yMin -= pad;
     yMax += pad;
   } else {
-    yMax *= 1.08;
+    const pad = (yMax - yMin || 1) * 0.08;
+    yMax += yMax > 0 ? pad : 0;
+    yMin -= yMin < 0 ? pad : 0;
+    if (yMax === yMin) yMax = yMin + 1;
   }
 
   // 柱状图两侧各留半个柱宽
@@ -83,7 +89,12 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
         {hover ? (
           <span className="num text-ink">
             <span className="mr-2 text-muted">{short(hover)}</span>
-            {hoverPrimary && (
+            {hoverPrimary && diverging && (
+              <>
+                {hoverPrimary.value >= 0 ? diverging.positive : diverging.negative} <b>{fmt(Math.abs(hoverPrimary.value))}</b> {unit}
+              </>
+            )}
+            {hoverPrimary && !diverging && (
               <>
                 {secondary ? `${primary.label} ` : ""}
                 <b>{fmt(hoverPrimary.value)}</b> {unit}
@@ -106,6 +117,18 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
                 <span className="flex items-center gap-1.5">
                   <i className="inline-block h-2 w-2 rounded-full bg-faint" />
                   {secondary.label}
+                </span>
+              </>
+            )}
+            {diverging && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <i className="inline-block h-2.5 w-2.5 rounded-sm bg-accent" />
+                  {diverging.positive}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <i className="inline-block h-2.5 w-2.5 rounded-sm bg-warn" />
+                  {diverging.negative}
                 </span>
               </>
             )}
@@ -143,6 +166,7 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
         {target && (
           <line x1={PAD.left} x2={W - PAD.right} y1={y(target.value)} y2={y(target.value)} stroke="var(--faint)" strokeWidth="1.5" strokeDasharray="4 4" />
         )}
+        {diverging && yMin < 0 && <line x1={PAD.left} x2={W - PAD.right} y1={y(0)} y2={y(0)} stroke="var(--faint)" strokeWidth="1" />}
         {hover && <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={PAD.top + PLOT_H} stroke="var(--faint)" strokeWidth="1" />}
 
         {secondary?.points.map((p) => (
@@ -151,13 +175,17 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
 
         {kind === "bar" &&
           primary.points.map((p) => {
-            const h = Math.max(1, y(0) - y(p.value));
+            const negative = p.value < 0;
+            const h = Math.max(1, Math.abs(y(0) - y(p.value)));
             const r = Math.min(4, barW / 2, h);
             const left = x(p.date) - barW / 2;
-            const top = y(p.value);
-            // 只有顶端是圆角，底部贴着基线
-            const d = `M${left},${top + h} V${top + r} Q${left},${top} ${left + r},${top} H${left + barW - r} Q${left + barW},${top} ${left + barW},${top + r} V${top + h} Z`;
-            return <path key={p.date} d={d} fill="var(--accent)" opacity={hover && hover !== p.date ? 0.45 : 1} />;
+            const right = left + barW;
+            const base = y(0);
+            // 远离基线的一端是圆角，贴着基线的一端是直角；负值向下画
+            const end = negative ? base + h : base - h;
+            const dir = negative ? -1 : 1;
+            const d = `M${left},${base} V${end + r * dir} Q${left},${end} ${left + r},${end} H${right - r} Q${right},${end} ${right},${end + r * dir} V${base} Z`;
+            return <path key={p.date} d={d} fill={negative ? "var(--warn)" : "var(--accent)"} opacity={hover && hover !== p.date ? 0.45 : 1} />;
           })}
 
         {kind === "line" && (

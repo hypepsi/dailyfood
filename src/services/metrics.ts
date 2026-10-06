@@ -134,3 +134,15 @@ export function getLatest(user: User, field: MetricField): { value: number; date
     .get();
   return row ? { value: row.value as number, date: row.date } : null;
 }
+
+/** 最近一次带体脂率的记录，以及同一次测量的体重（用于换算脂肪量和去脂体重） */
+export function getLatestBodyFat(user: User): { pct: number; weightKg: number | null; date: string } | null {
+  const row = getDb()
+    .select({ pct: bodyMetrics.bodyFatPct, weightKg: bodyMetrics.weightKg, date: bodyMetrics.localDate })
+    .from(bodyMetrics)
+    .where(and(eq(bodyMetrics.userId, user.id), isNotNull(bodyMetrics.bodyFatPct)))
+    .orderBy(desc(bodyMetrics.measuredAt))
+    .limit(1)
+    .get();
+  return row ? { pct: row.pct as number, weightKg: row.weightKg, date: row.date } : null;
+}

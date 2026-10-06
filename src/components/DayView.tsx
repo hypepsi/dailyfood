@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Egg, Flame, History, Scale, Utensils } from "lucide-react";
 import type { User } from "@/db/schema";
-import { addDays, daysBetween, formatDateCn } from "@/lib/time";
+import { addDays, daysBetween, formatDateCn, shortDate } from "@/lib/time";
 import { kgToJin, rollingAverage } from "@/lib/weight";
 import { getDailyTotals, getPendingDrafts } from "@/services/meals";
-import { getDailySeries } from "@/services/metrics";
+import { getDailySeries, getLatestBodyFat } from "@/services/metrics";
 import { ACTIVITY } from "@/lib/goals";
 import { getActivities } from "@/services/activity";
 import { getDaySummary, getDeficitSummary, getEnergy, getWeightStats } from "@/services/snapshot";
@@ -41,6 +41,9 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const deficit = getDeficitSummary(user, date);
   const activity = getActivities(user, date, date).get(date) ?? null;
   const { energy } = getEnergy(user, today);
+  const bodyFat = getLatestBodyFat(user);
+  // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
+  const fatMass = bodyFat?.weightKg ? (bodyFat.weightKg * bodyFat.pct) / 100 : null;
   const toGoal = weight.avg7Kg !== null && goals.targetWeightKg !== null ? weight.avg7Kg - goals.targetWeightKg : null;
 
   return (
@@ -128,7 +131,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
       </Card>
 
-      <Card icon={Scale} title="体重" action={{ href: "/weight", label: "历史", icon: History }}>
+      <Card icon={Scale} title="体重与体脂" action={{ href: "/weight", label: "历史", icon: History }}>
         {weight.latestKg === null ? (
           <Link href="/weight" className="block py-1 text-muted">
             还没有体重记录，上传一张体脂秤报告 →
@@ -157,6 +160,15 @@ export function DayView({ user, date, today }: { user: User; date: string; today
                 { label: "距目标", value: toGoal === null ? "—" : toGoal <= 0 ? "已达成" : `${toGoal.toFixed(1)} kg` },
               ]}
             />
+            {bodyFat && (
+              <StatRow
+                stats={[
+                  { label: `体脂率${bodyFat.date === weight.latestDate ? "" : `（${shortDate(bodyFat.date)}）`}`, value: `${bodyFat.pct}%` },
+                  { label: "脂肪量", value: fatMass === null ? "—" : `${fatMass.toFixed(1)} kg` },
+                  { label: "去脂体重", value: fatMass === null ? "—" : `${(bodyFat.weightKg! - fatMass).toFixed(1)} kg` },
+                ]}
+              />
+            )}
           </>
         )}
       </Card>

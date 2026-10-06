@@ -35,7 +35,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-3 lg:space-y-4">
-      <h1 className="text-center text-xl font-bold lg:text-2xl">我的</h1>
+      <h1 className="page-title flex h-11 items-center justify-center">我的</h1>
       {rec ? (
         <GoalRecommendation profile={profile} recommended={{ calorieTarget: rec.calorieTarget, proteinTargetG: rec.proteinTargetG }} basis={basis} />
       ) : (

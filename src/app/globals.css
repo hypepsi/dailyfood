@@ -180,6 +180,11 @@ select {
     }
   }
 
+  /* 每个页面顶部的大标题，全站同一个样式 */
+  .page-title {
+    @apply text-center text-[22px] font-extrabold tracking-tight lg:text-[26px];
+  }
+
   .icon-tile {
     @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-tint text-accent lg:h-10 lg:w-10;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);

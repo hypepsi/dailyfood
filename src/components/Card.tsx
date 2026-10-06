@@ -6,6 +6,8 @@ type Props = {
   title: string;
   /** 右上角的次要入口，如「历史」 */
   action?: { href: string; label: string; icon?: LucideIcon };
+  /** 右上角放别的内容（如状态标签）时用它代替 action */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -18,7 +20,7 @@ function IconTile({ icon: Icon }: { icon: LucideIcon }) {
 }
 
 /** 通用卡片：图标 + 标题 + 右上角入口 */
-export function Card({ icon, title, action, children }: Props) {
+export function Card({ icon, title, action, aside, children }: Props) {
   return (
     <section className="card">
       <header className="mb-3 flex items-center gap-2.5 lg:mb-4">
@@ -30,6 +32,7 @@ export function Card({ icon, title, action, children }: Props) {
             {action.label}
           </Link>
         )}
+        {aside}
       </header>
       {children}
     </section>

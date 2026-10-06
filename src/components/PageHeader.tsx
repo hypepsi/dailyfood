@@ -8,7 +8,7 @@ export function PageHeader({ title, backHref = "/" }: { title: string; backHref?
       <Link href={backHref} aria-label="返回" className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-muted active:bg-line">
         <ChevronLeft size={26} />
       </Link>
-      <h1 className="flex-1 pr-9 text-center text-lg font-bold lg:text-2xl">{title}</h1>
+      <h1 className="page-title flex-1 pr-9">{title}</h1>
     </header>
   );
 }

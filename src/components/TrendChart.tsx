@@ -148,7 +148,8 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
         aria-label={`${primary.label}趋势图`}
         onPointerMove={onPointer}
         onPointerDown={onPointer}
-        onPointerLeave={() => setHover(null)}
+        // 鼠标移开就收起；手指点一下后要留着，否则一松手数值就消失，根本来不及看
+        onPointerLeave={(e) => e.pointerType === "mouse" && setHover(null)}
       >
         {ticks.map((t) => (
           <g key={t}>

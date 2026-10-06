@@ -13,7 +13,7 @@ export function MealList({ meals, date, timezone }: { meals: MealWithItems[]; da
         const list = meals.filter((m) => m.mealType === type);
         const kcal = list.reduce((s, m) => s + m.totals.kcal, 0);
         return (
-          <div key={type} className="py-2.5 first:pt-0 last:pb-0">
+          <div key={type} className="py-2.5 first:pt-0 last:pb-0 lg:py-4">
             <div className="flex items-center">
               <h3 className="flex-1 text-[15px] font-semibold">{MEAL_LABELS[type]}</h3>
               {list.length > 0 ? (
@@ -30,17 +30,17 @@ export function MealList({ meals, date, timezone }: { meals: MealWithItems[]; da
               </Link>
             </div>
             {list.map((meal) => (
-              <Link key={meal.id} href={`/meal/${meal.id}`} className="mt-1.5 flex items-center gap-2.5 rounded-xl p-0.5 active:bg-bg">
+              <Link key={meal.id} href={`/meal/${meal.id}`} className="mt-1.5 flex items-center gap-2.5 rounded-xl p-0.5 lg:mt-2 lg:gap-3 lg:hover:bg-bg active:bg-bg">
                 {meal.thumbPath ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={`/api/meals/${meal.id}/image?size=thumb`}
                     alt=""
                     loading="lazy"
-                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover lg:h-14 lg:w-14"
                   />
                 ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tint text-base font-semibold text-accent">
+                  <span className="flex h-12 w-12 shrink-0 lg:h-14 lg:w-14 items-center justify-center rounded-xl bg-tint text-base font-semibold text-accent">
                     {(meal.title || MEAL_LABELS[type]).slice(0, 1)}
                   </span>
                 )}

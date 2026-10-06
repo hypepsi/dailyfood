@@ -17,7 +17,7 @@ export function Sparkline({ series }: { series: DailyValue[] }) {
   }));
   const last = pts.at(-1)!;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-11 w-full" preserveAspectRatio="none" aria-hidden>
+    <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-11 w-full lg:h-14" preserveAspectRatio="none" aria-hidden>
       <polyline
         points={pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
         fill="none"

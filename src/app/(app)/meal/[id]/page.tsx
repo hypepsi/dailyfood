@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { MealEditor, type EditorItem } from "@/components/MealEditor";
+import { Narrow } from "@/components/Narrow";
 import { PageHeader } from "@/components/PageHeader";
 import type { MealEstimate } from "@/lib/ai/analyze-meal";
 import { AppError } from "@/lib/errors";
@@ -45,7 +46,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
   }));
 
   return (
-    <>
+    <Narrow>
       <PageHeader title={isDraft ? "确认这顿饭" : "修改记录"} backHref={meal.localDate === today ? "/" : `/day/${meal.localDate}`} />
       {meal.thumbPath && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -63,6 +64,6 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
             : undefined
         }
       />
-    </>
+    </Narrow>
   );
 }

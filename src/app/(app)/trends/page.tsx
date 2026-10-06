@@ -28,9 +28,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const allWeights = getDailySeries(user, "weightKg");
   const allBodyFat = getDailySeries(user, "bodyFatPct");
   const allWaist = getDailySeries(user, "waistCm");
-  const earliest = [allWeights[0]?.date, allBodyFat[0]?.date, allWaist[0]?.date, getFirstMealDate(user)]
-    .filter((d): d is string => !!d)
-    .sort()[0];
+  const earliest = [allWeights[0]?.date, allBodyFat[0]?.date, allWaist[0]?.date, getFirstMealDate(user)].filter((d): d is string => !!d).sort()[0];
   // “全部”从最早一条数据开始，至少显示 7 天
   const from = range.days ? addDays(today, -(range.days - 1)) : earliest && earliest < addDays(today, -6) ? earliest : addDays(today, -6);
   const inRange = (s: DailyValue[]) => s.filter((p) => p.date >= from && p.date <= today);
@@ -53,101 +51,124 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const chartRange = { from, to: today };
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-center text-xl font-bold">趋势</h1>
+    <div>
+      <div className="mb-3 lg:mb-6 lg:flex lg:items-center lg:justify-between">
+        <h1 className="mb-3 text-center text-xl font-bold lg:mb-0 lg:text-2xl">趋势</h1>
 
-      <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1">
-        {RANGES.map((r) => (
-          <Link
-            key={r.key}
-            href={`/trends?range=${r.key}`}
-            replace
-            className={`rounded-xl py-2.5 text-center text-sm ${r.key === range.key ? "bg-card font-semibold text-accent shadow-card" : "text-muted"}`}
-          >
-            {r.label}
-          </Link>
-        ))}
-      </nav>
+        <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1 lg:w-80">
+          {RANGES.map((r) => (
+            <Link
+              key={r.key}
+              href={`/trends?range=${r.key}`}
+              replace
+              className={`rounded-xl py-2.5 text-center text-sm ${r.key === range.key ? "bg-card font-semibold text-accent shadow-card" : "text-muted"}`}
+            >
+              {r.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
 
-      <Card icon={Scale} title="体重">
-        {weightAvg.length === 0 ? (
-          <Link href="/weight" className="block py-2 text-muted">
-            这段时间没有体重记录，去记一次 →
-          </Link>
-        ) : (
-          <>
-            <BigStat label="7日平均" value={weightAvg.at(-1)!.value.toFixed(1)} unit="kg" />
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-5">
+        <Card icon={Scale} title="体重">
+          {weightAvg.length === 0 ? (
+            <Link href="/weight" className="block py-2 text-muted">
+              这段时间没有体重记录，去记一次 →
+            </Link>
+          ) : (
+            <>
+              <BigStat label="7日平均" value={weightAvg.at(-1)!.value.toFixed(1)} unit="kg" />
+              <div className="mt-2">
+                <TrendChart
+                  kind="line"
+                  {...chartRange}
+                  unit="kg"
+                  digits={1}
+                  primary={{ label: "7日平均", points: weightAvg }}
+                  secondary={{ label: "当日体重", points: weights }}
+                />
+              </div>
+              <StatRow
+                stats={[
+                  { label: "区间变化", value: weightChange === null ? "—" : `${signed(weightChange)} kg` },
+                  { label: "平均每周", value: weightTrend === null ? "数据不足" : `${signed(weightTrend, 2)} kg` },
+                  { label: "记录天数", value: `${weights.length}` },
+                ]}
+              />
+            </>
+          )}
+        </Card>
+
+        <Card icon={Flame} title="热量">
+          {avgKcal === null ? (
+            <p className="py-2 text-muted">这段时间没有饮食记录</p>
+          ) : (
+            <>
+              <BigStat label="平均每日摄入" value={`${Math.round(avgKcal)}`} unit="kcal" />
+              <div className="mt-2">
+                <TrendChart
+                  kind="bar"
+                  {...chartRange}
+                  unit="kcal"
+                  primary={{ label: "热量", points: intake.map((d) => ({ date: d.date, value: d.kcal })) }}
+                  target={{ label: "目标", value: goals.calorieTarget }}
+                />
+              </div>
+              <StatRow
+                stats={[
+                  { label: "记录天数", value: `${intake.length}` },
+                  { label: "未超目标", value: `${withinTarget} 天` },
+                  { label: "日均差值", value: `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
+                ]}
+              />
+              <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子</p>
+            </>
+          )}
+        </Card>
+
+        {avgProtein !== null && (
+          <Card icon={Egg} title="蛋白质">
+            <BigStat label="平均每日摄入" value={`${Math.round(avgProtein)}`} unit="g" />
             <div className="mt-2">
-              <TrendChart kind="line" {...chartRange} unit="kg" digits={1} primary={{ label: "7日平均", points: weightAvg }} secondary={{ label: "当日体重", points: weights }} />
+              <TrendChart
+                kind="bar"
+                {...chartRange}
+                unit="g"
+                primary={{ label: "蛋白质", points: intake.map((d) => ({ date: d.date, value: Math.round(d.proteinG) })) }}
+                target={{ label: "目标", value: goals.proteinTargetG }}
+              />
             </div>
             <StatRow
               stats={[
-                { label: "区间变化", value: weightChange === null ? "—" : `${signed(weightChange)} kg` },
-                { label: "平均每周", value: weightTrend === null ? "数据不足" : `${signed(weightTrend, 2)} kg` },
-                { label: "记录天数", value: `${weights.length}` },
+                { label: "达标天数", value: `${proteinHit} / ${intake.length}` },
+                { label: "目标", value: `${goals.proteinTargetG} g` },
               ]}
             />
-          </>
+          </Card>
         )}
-      </Card>
 
-      <Card icon={Flame} title="热量">
-        {avgKcal === null ? (
-          <p className="py-2 text-muted">这段时间没有饮食记录</p>
-        ) : (
-          <>
-            <BigStat label="平均每日摄入" value={`${Math.round(avgKcal)}`} unit="kcal" />
-            <div className="mt-2">
-              <TrendChart kind="bar" {...chartRange} unit="kcal" primary={{ label: "热量", points: intake.map((d) => ({ date: d.date, value: d.kcal })) }} target={{ label: "目标", value: goals.calorieTarget }} />
-            </div>
-            <StatRow
-              stats={[
-                { label: "记录天数", value: `${intake.length}` },
-                { label: "未超目标", value: `${withinTarget} 天` },
-                { label: "日均差值", value: `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
-              ]}
-            />
-            <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子</p>
-          </>
+        {bodyFat.length > 0 && (
+          <Card icon={Percent} title="体脂率">
+            <BigStat label="最新" value={bodyFat.at(-1)!.value.toFixed(1)} unit="%" />
+            {bodyFat.length > 1 && (
+              <div className="mt-2">
+                <TrendChart kind="line" {...chartRange} unit="%" digits={1} primary={{ label: "体脂率", points: bodyFat }} />
+              </div>
+            )}
+          </Card>
         )}
-      </Card>
 
-      {avgProtein !== null && (
-        <Card icon={Egg} title="蛋白质">
-          <BigStat label="平均每日摄入" value={`${Math.round(avgProtein)}`} unit="g" />
-          <div className="mt-2">
-            <TrendChart kind="bar" {...chartRange} unit="g" primary={{ label: "蛋白质", points: intake.map((d) => ({ date: d.date, value: Math.round(d.proteinG) })) }} target={{ label: "目标", value: goals.proteinTargetG }} />
-          </div>
-          <StatRow
-            stats={[
-              { label: "达标天数", value: `${proteinHit} / ${intake.length}` },
-              { label: "目标", value: `${goals.proteinTargetG} g` },
-            ]}
-          />
-        </Card>
-      )}
-
-      {bodyFat.length > 0 && (
-        <Card icon={Percent} title="体脂率">
-          <BigStat label="最新" value={bodyFat.at(-1)!.value.toFixed(1)} unit="%" />
-          {bodyFat.length > 1 && (
-            <div className="mt-2">
-              <TrendChart kind="line" {...chartRange} unit="%" digits={1} primary={{ label: "体脂率", points: bodyFat }} />
-            </div>
-          )}
-        </Card>
-      )}
-
-      {waist.length > 0 && (
-        <Card icon={Ruler} title="腰围">
-          <BigStat label="最新" value={waist.at(-1)!.value.toFixed(1)} unit="cm" />
-          {waist.length > 1 && (
-            <div className="mt-2">
-              <TrendChart kind="line" {...chartRange} unit="cm" digits={1} primary={{ label: "腰围", points: waist }} />
-            </div>
-          )}
-        </Card>
-      )}
+        {waist.length > 0 && (
+          <Card icon={Ruler} title="腰围">
+            <BigStat label="最新" value={waist.at(-1)!.value.toFixed(1)} unit="cm" />
+            {waist.length > 1 && (
+              <div className="mt-2">
+                <TrendChart kind="line" {...chartRange} unit="cm" digits={1} primary={{ label: "腰围", points: waist }} />
+              </div>
+            )}
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

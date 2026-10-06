@@ -57,8 +57,8 @@ export function CaptureActions({ date, isToday }: Props) {
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} />
       <input ref={albumInput} type="file" accept="image/*" hidden onChange={onChange} />
 
-      <div className="flex gap-2.5">
-        <button className="btn-primary flex-1 py-4 text-[17px] shadow-card" onClick={() => cameraInput.current?.click()}>
+      <div className="flex gap-2.5 lg:gap-3">
+        <button className="btn-primary flex-1 py-4 text-[17px] shadow-card lg:py-5 lg:text-lg" onClick={() => cameraInput.current?.click()}>
           <Camera size={21} />
           {isToday ? "拍一顿" : "补拍一顿"}
         </button>
@@ -71,7 +71,7 @@ export function CaptureActions({ date, isToday }: Props) {
         </button>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+      <div className="mt-2.5 grid grid-cols-3 gap-2.5 lg:mt-3 lg:gap-3">
         <Link href="/weight" className="btn-secondary">
           <Scale size={16} className="text-accent" />
           身体数据
@@ -95,7 +95,7 @@ export function CaptureActions({ date, isToday }: Props) {
           ) : (
             <>
               <p className="text-center text-lg">{error}</p>
-              <div className="flex gap-2.5">
+              <div className="flex gap-2.5 lg:gap-3">
                 <button className="rounded-2xl bg-white/15 px-6 py-3" onClick={closeOverlay}>
                   关闭
                 </button>

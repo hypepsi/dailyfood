@@ -7,7 +7,7 @@ export default async function SettingsPage() {
   const user = await requireUser();
   const { bmr } = buildSnapshot(user);
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 lg:mx-auto lg:max-w-xl lg:space-y-5">
       <h1 className="text-center text-xl font-bold">我的</h1>
       <SettingsForm
         key={user.updatedAt}

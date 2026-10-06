@@ -11,7 +11,7 @@ type Props = {
 
 function IconTile({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-tint text-accent">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-tint text-accent lg:h-10 lg:w-10 lg:rounded-2xl">
       <Icon size={17} strokeWidth={2.2} />
     </span>
   );
@@ -20,10 +20,10 @@ function IconTile({ icon: Icon }: { icon: LucideIcon }) {
 /** 通用卡片：图标 + 标题 + 右上角入口 */
 export function Card({ icon, title, action, children }: Props) {
   return (
-    <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
-      <header className="mb-3 flex items-center gap-2.5">
+    <section className="rounded-3xl border border-line bg-card p-4 shadow-card lg:p-6">
+      <header className="mb-3 flex items-center gap-2.5 lg:mb-4">
         <IconTile icon={icon} />
-        <h2 className="flex-1 text-base font-semibold">{title}</h2>
+        <h2 className="flex-1 text-base font-semibold lg:text-lg">{title}</h2>
         {action && (
           <Link href={action.href} className="flex items-center gap-1 py-1 pl-3 text-[13px] text-faint active:text-ink">
             {action.icon && <action.icon size={14} />}
@@ -59,13 +59,13 @@ export function MiniCard({
   footer: string;
 }) {
   return (
-    <Link href={href} className="block rounded-3xl border border-line bg-card p-4 shadow-card active:bg-bg">
+    <Link href={href} className="block rounded-3xl border border-line bg-card p-4 shadow-card transition-shadow active:bg-bg lg:p-6 lg:hover:shadow-lg">
       <div className="flex items-center gap-2">
         <IconTile icon={icon} />
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="text-base font-semibold lg:text-lg">{title}</h2>
       </div>
       <div className="mt-3 text-[13px] text-faint">{label}</div>
-      <div className={`num text-[2rem] font-bold leading-tight tracking-tight ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
+      <div className={`num text-[2rem] font-bold leading-tight tracking-tight lg:text-[2.5rem] ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
         {value}
         <span className="ml-1 text-sm font-semibold">{unit}</span>
       </div>
@@ -92,7 +92,7 @@ export function BigStat({
   return (
     <div>
       <div className="text-[13px] text-faint">{label}</div>
-      <div className={`num text-[2.1rem] font-bold leading-tight tracking-tight ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
+      <div className={`num text-[2.1rem] font-bold leading-tight tracking-tight lg:text-[2.5rem] ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
         {value}
         {unit && <span className="ml-1 text-base font-semibold">{unit}</span>}
       </div>
@@ -104,7 +104,7 @@ export function BigStat({
 /** 卡片底部的两三个小统计 */
 export function StatRow({ stats }: { stats: { label: string; value: string }[] }) {
   return (
-    <dl className="mt-3 flex border-t border-line pt-3">
+    <dl className="mt-3 flex border-t border-line pt-3 lg:mt-4 lg:pt-4">
       {stats.map((s) => (
         <div key={s.label} className="flex-1">
           <dt className="text-xs text-faint">{s.label}</dt>

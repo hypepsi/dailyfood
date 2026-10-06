@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Sparkles, Trash2 } from "lucide-react";
 import { PortionFix, EATEN_OPTIONS, fractionLabel } from "./PortionFix";
 import { MEAL_TYPES, type MealType } from "@/db/schema";
 import { parseNumber, request } from "@/lib/client-api";
@@ -43,6 +43,8 @@ type Row = {
   personal: boolean;
   /** 实际吃掉的比例，1 = 全吃了 */
   eaten: number;
+  /** 当前这组营养数值对应的食物名称；名称被改掉后提示“按新名称重新估算” */
+  estimatedFor: string;
   confidence?: EditorItem["confidence"];
   open: boolean;
   /** 改重量时按这组数值等比例换算 */
@@ -64,13 +66,14 @@ function toRow(item: EditorItem): Row {
     fat: str(item.fatG),
     personal: item.personal ?? false,
     eaten: item.eatenFraction ?? 1,
+    estimatedFor: item.name,
     confidence: item.confidence,
     open: false,
     base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
   };
 }
 
-const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", personal: false, eaten: 1, open: true, base: null });
+const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", personal: false, eaten: 1, estimatedFor: "", open: true, base: null });
 
 const num = (s: string) => parseNumber(s) ?? 0;
 
@@ -89,6 +92,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<"" | "save" | "refine" | "delete">("");
   const [error, setError] = useState("");
+  const [estimating, setEstimating] = useState<number | null>(null);
 
   // 明细是整桌的量；“我的份”= 整桌 ÷ 人数
   const tableKcal = Math.round(rows.reduce((s, r) => s + num(r.kcal), 0));
@@ -101,6 +105,34 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
     fat: round1(mine((r) => r.fat)),
   };
   const hint = estimate?.peopleHint ?? 1;
+
+  /** 名称改了（AI 认错了菜），或新加了一样还没填热量的食物：让 AI 按现在的名称估算这一项 */
+  async function reestimate(row: Row) {
+    setEstimating(row.key);
+    setError("");
+    try {
+      const { item } = await request<{ item: { quantity: string; weightG: number | null; kcal: number; proteinG: number; carbsG: number; fatG: number } }>(
+        "POST",
+        "/api/meals/estimate-item",
+        { name: row.name.trim(), quantity: row.quantity.trim(), weightG: parseNumber(row.weight) },
+      );
+      update(row.key, {
+        quantity: item.quantity,
+        weight: str(item.weightG),
+        kcal: String(item.kcal),
+        protein: String(item.proteinG),
+        carbs: String(item.carbsG),
+        fat: String(item.fatG),
+        estimatedFor: row.name.trim(),
+        confidence: undefined,
+        base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
+      });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setEstimating(null);
+    }
+  }
 
   function update(key: number, patch: Partial<Row>) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -313,6 +345,16 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
             <Field label="重量 g" value={row.weight} onChange={(v) => changeWeight(row, v)} numeric />
             <Field label="热量 kcal" value={row.kcal} onChange={(v) => changeValue(row, "kcal", v)} numeric strong />
           </div>
+          {row.name.trim() !== "" && row.name.trim() !== row.estimatedFor && (
+            <button
+              onClick={() => reestimate(row)}
+              disabled={estimating !== null}
+              className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent bg-tint py-2.5 text-sm font-semibold text-accent-deep transition active:scale-[0.98] disabled:opacity-60"
+            >
+              <Sparkles size={16} className={estimating === row.key ? "animate-pulse" : ""} />
+              {estimating === row.key ? "正在估算…" : row.estimatedFor ? `名称改了，按「${row.name.trim()}」重新估算` : `让 AI 估算「${row.name.trim()}」`}
+            </button>
+          )}
           {(mode === "edit" || row.eaten !== 1) && (
             <div className="mt-2.5 flex items-center gap-1.5">
               <span className="mr-0.5 shrink-0 text-xs text-muted">实际吃了</span>

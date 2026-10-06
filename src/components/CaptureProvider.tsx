@@ -96,7 +96,6 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
 
       {voice && <VoiceOverlay
           title={`正在听，说说${voice.mealType ? MEAL_LABELS[voice.mealType] : ""}吃了什么`}
-          example="中午和丹丹吃了一盘西红柿炒鸡蛋，一小碗糙米饭"
           onRecorded={analyzeVoice}
           onClose={closeVoice}
         />}

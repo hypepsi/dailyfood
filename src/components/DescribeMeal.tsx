@@ -32,7 +32,6 @@ export function DescribeMeal({ date, isToday }: { date: string; isToday: boolean
       <h2 className="mb-3 font-semibold">说一下吃了什么</h2>
       <textarea
         className="field min-h-24 resize-none"
-        placeholder="例如：一碗牛肉面，加了一个卤蛋，汤没喝"
         maxLength={500}
         value={text}
         onChange={(e) => setText(e.target.value)}

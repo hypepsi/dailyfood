@@ -67,7 +67,7 @@ export function ActivityCard({ date, isToday, burn, entry, estimateBasis }: Prop
           <input
             className="field num min-w-0 flex-1"
             inputMode="numeric"
-            placeholder="手表上的运动消耗，如 1086"
+            placeholder="手表上的运动消耗"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             aria-label="手表显示的运动消耗千卡数"

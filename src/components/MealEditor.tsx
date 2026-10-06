@@ -309,7 +309,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
             </button>
           </div>
           <div className="mt-2.5 grid grid-cols-3 gap-2">
-            <Field label="数量" value={row.quantity} onChange={(v) => update(row.key, { quantity: v })} placeholder="如 1 碗" />
+            <Field label="数量" value={row.quantity} onChange={(v) => update(row.key, { quantity: v })} />
             <Field label="重量 g" value={row.weight} onChange={(v) => changeWeight(row, v)} numeric />
             <Field label="热量 kcal" value={row.kcal} onChange={(v) => changeValue(row, "kcal", v)} numeric strong />
           </div>

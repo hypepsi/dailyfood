@@ -13,9 +13,8 @@ function pickMimeType(): string | undefined {
 }
 
 type Props = {
-  /** 录音时显示的标题和示例 */
+  /** 录音时显示的标题 */
   title: string;
-  example: string;
   /** 录完后怎么处理这段录音；抛出的错误会显示给用户并允许重录。成功后由调用方负责关闭 */
   onRecorded: (audio: Blob) => Promise<void>;
   onClose: () => void;
@@ -25,7 +24,7 @@ type Props = {
  * 通用的录音浮层：打开即开始录音，点「说完了」后把录音交给 onRecorded。
  * 最长录 60 秒，到时自动结束。
  */
-export function VoiceOverlay({ title, example, onRecorded, onClose }: Props) {
+export function VoiceOverlay({ title, onRecorded, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
@@ -111,7 +110,6 @@ export function VoiceOverlay({ title, example, onRecorded, onClose }: Props) {
           </span>
           <div>
             <p className="text-xl font-semibold">{phase === "recording" ? title : "正在打开麦克风…"}</p>
-            <p className="mt-2 text-sm text-white/70">例如：{example}</p>
             {phase === "recording" && <p className="num mt-3 text-white/70">{seconds} 秒</p>}
           </div>
           <div className="flex gap-3">

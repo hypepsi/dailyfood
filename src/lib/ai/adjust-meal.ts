@@ -53,7 +53,7 @@ export function normalizeAdjustment(raw: unknown, itemCount: number): MealAdjust
     if (index >= 0 && index < itemCount) fractions[index] = clampFraction(a.eaten_fraction);
   }
   if (!parsed.understood || fractions.every((f) => f === null)) {
-    throw new AppError(422, "not_understood", "没听出要怎么修正，可以说「米饭剩了一半」或「整体只吃了一半」");
+    throw new AppError(422, "not_understood", "没听出要怎么修正，请再说一次，或直接点选比例");
   }
   return { fractions, summary: parsed.summary.trim().slice(0, 100) };
 }

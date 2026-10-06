@@ -126,7 +126,7 @@ export function PortionFix({ mealId, items, onApply }: Props) {
         >
           <Mic size={20} />
         </button>
-        <input className="field min-w-0 flex-1 py-2.5" placeholder="或写一句：米饭剩了一半，汤没喝" maxLength={300} value={text} onChange={(e) => setText(e.target.value)} />
+        <input className="field min-w-0 flex-1 py-2.5" placeholder="或者写一句" maxLength={300} value={text} onChange={(e) => setText(e.target.value)} />
         {text.trim() && (
           <button className="btn-secondary shrink-0 px-4" disabled={busy}>
             {busy ? "…" : "应用"}
@@ -137,7 +137,7 @@ export function PortionFix({ mealId, items, onApply }: Props) {
       {message && <p className={`mt-2.5 text-sm ${message.ok ? "text-accent-deep" : "text-warn"}`}>{message.text}</p>}
 
       {listening && (
-        <VoiceOverlay title="正在听，说说实际吃了多少" example="米饭没吃完，剩了一半，汤没喝" onRecorded={(audio) => interpret({ audio })} onClose={() => setListening(false)} />
+        <VoiceOverlay title="正在听，说说实际吃了多少" onRecorded={(audio) => interpret({ audio })} onClose={() => setListening(false)} />
       )}
     </section>
   );

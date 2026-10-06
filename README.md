@@ -76,6 +76,12 @@ sudo deploy/deploy.sh                  # 安装依赖、测试、构建、重启
 - 服务器重启后 `loseweight`、`caddy` 和每日维护定时器都会自动启动。
 - 域名经过 Cloudflare 代理时，Cloudflare 的 SSL 模式应为 Full (strict)。
 
+## 代码仓库
+
+代码托管在 GitHub 私有仓库 `hypepsi/dailyfood`。服务器通过只对该仓库有效的部署钥匙推送
+（`~/.ssh/config` 里的 `github-loseweight`）。改完并部署后执行 `git push` 同步。
+仓库里只有程序；密钥在 `/etc/loseweight/env`，数据和照片在 `/var/lib/loseweight`，都不进仓库。
+
 ## 数据库迁移
 
 1. 修改 `src/db/schema.ts`

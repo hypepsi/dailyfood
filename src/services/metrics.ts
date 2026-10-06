@@ -41,10 +41,14 @@ export function addMetric(user: User, input: MetricInput): number {
   const date = input.date ?? local.date;
   if (date > local.date) throw badRequest("不能记录未来的日期");
   const measuredAt = date === local.date ? now : zonedToUtc(date, "08:00", user.timezone);
-  const { date: _omit, ...values } = input;
+  const { date: _omit, note, ...numbers } = input;
+  // 统一保留两位小数，避免浮点误差进库
+  const values = Object.fromEntries(
+    Object.entries(numbers).map(([k, v]) => [k, v === null ? null : Math.round(v * 100) / 100]),
+  ) as typeof numbers;
   return getDb()
     .insert(bodyMetrics)
-    .values({ ...values, userId: user.id, localDate: date, measuredAt, createdAt: now })
+    .values({ ...values, note, userId: user.id, localDate: date, measuredAt, createdAt: now })
     .returning({ id: bodyMetrics.id })
     .get().id;
 }

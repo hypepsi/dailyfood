@@ -25,7 +25,8 @@ if ! command -v caddy >/dev/null; then
   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' > /etc/apt/sources.list.d/caddy-stable.list
 fi
 apt-get update -qq
-apt-get install -y -qq nodejs caddy sqlite3
+# build-essential：better-sqlite3 没有可用预编译包时需要本地编译
+apt-get install -y -qq nodejs caddy sqlite3 build-essential
 
 echo "==> 防火墙"
 ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable

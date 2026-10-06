@@ -112,10 +112,10 @@ export function renderSnapshot(s: Snapshot): string {
   for (const m of day.meals) {
     const time = localParts(m.eatenAt, s.timezone).time;
     const items = m.items.map((i) => `${i.name}${i.quantity ? ` ${i.quantity}` : ""} ${Math.round(i.kcal)}kcal`).join("；");
-    lines.push(`- ${MEAL_LABELS[m.mealType]} ${time}：${m.totals.kcal} kcal，蛋白质 ${m.totals.proteinG} g（${items}）`);
+    lines.push(`- ${MEAL_LABELS[m.mealType]} ${time}：${m.totals.kcal} kcal，蛋白质 ${Math.round(m.totals.proteinG)} g（${items}）`);
   }
   lines.push(
-    `今日合计：${day.totals.kcal} kcal，蛋白质 ${day.totals.proteinG} g，碳水 ${day.totals.carbsG} g，脂肪 ${day.totals.fatG} g`,
+    `今日合计：${day.totals.kcal} kcal，蛋白质 ${Math.round(day.totals.proteinG)} g，碳水 ${Math.round(day.totals.carbsG)} g，脂肪 ${Math.round(day.totals.fatG)} g`,
   );
   lines.push(
     day.kcalRemaining >= 0
@@ -123,7 +123,9 @@ export function renderSnapshot(s: Snapshot): string {
       : `今日已超出目标：${-day.kcalRemaining} kcal`,
   );
   lines.push(
-    day.proteinRemaining > 0 ? `蛋白质还差：${day.proteinRemaining} g` : `蛋白质已达标（超出 ${-day.proteinRemaining} g）`,
+    day.proteinRemaining > 0
+      ? `蛋白质还差：${Math.round(day.proteinRemaining)} g`
+      : `蛋白质已达标（超出 ${Math.round(-day.proteinRemaining)} g）`,
   );
 
   lines.push("", "【最近 14 天（不含今天）】");

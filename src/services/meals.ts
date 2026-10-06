@@ -153,7 +153,8 @@ export function saveMeal(user: User, mealId: number, input: MealInput) {
         mealType: input.mealType,
         localDate: input.date,
         eatenAt: zonedToUtc(input.date, input.time, user.timezone),
-        title: titleFor(input),
+        // 用户没改标题时保留原来的（例如 AI 起的名字）
+        title: input.title || meal.title || titleFor(input),
         status: "confirmed",
         confirmedAt: meal.confirmedAt ?? now,
         updatedAt: now,

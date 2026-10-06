@@ -47,9 +47,9 @@ export function DayView({ user, date, today }: { user: User; date: string; today
           <ChevronLeft size={24} />
         </Link>
         <div className="text-center">
-          <h1 className="text-xl font-bold lg:text-2xl">{formatDateCn(date)}</h1>
+          <h1 className="text-[22px] font-extrabold tracking-tight lg:text-[26px]">{formatDateCn(date)}</h1>
           {isToday ? (
-            <p className="text-[13px] text-faint">今天</p>
+            <p className="text-[13px] font-medium text-muted">今天</p>
           ) : (
             <Link href="/" className="block text-[13px] text-accent">
               回到今天

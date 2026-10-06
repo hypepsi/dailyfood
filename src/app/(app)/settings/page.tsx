@@ -39,7 +39,7 @@ export default async function SettingsPage() {
       {rec ? (
         <GoalRecommendation profile={profile} recommended={{ calorieTarget: rec.calorieTarget, proteinTargetG: rec.proteinTargetG }} basis={basis} />
       ) : (
-        <p className="rounded-3xl bg-tint p-4 text-sm text-accent-deep">上传一次体脂秤报告，并填好性别、出生日期和身高后，这里会给出推荐的每日目标。</p>
+        <p className="card-tint text-sm">上传一次体脂秤报告，并填好性别、出生日期和身高后，这里会给出推荐的每日目标。</p>
       )}
       <SettingsForm key={user.updatedAt} initial={profile} bmrHint={rec ? `不建议低于基础代谢 ${rec.bmr} kcal` : null} />
       <AccountActions username={user.username} />

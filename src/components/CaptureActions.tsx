@@ -18,7 +18,7 @@ export function CaptureActions({ date, isToday }: Props) {
   return (
     <div className="space-y-2.5">
       <div className="flex gap-2.5">
-        <button className="btn-primary flex-1 py-4 text-[17px] shadow-card" onClick={() => capture.openCamera(target)}>
+        <button className="btn-primary flex-1 py-4 text-[17px]" onClick={() => capture.openCamera(target)}>
           <Camera size={21} />
           {isToday ? "拍一顿" : "补拍一顿"}
         </button>

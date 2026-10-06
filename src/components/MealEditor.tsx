@@ -190,7 +190,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
   return (
     <div className="space-y-3 pb-24">
       {estimate && (
-        <section className="rounded-3xl bg-tint p-4 text-accent-deep">
+        <section className="card-tint">
           <div className="text-sm opacity-80">AI 估算{hint > 1 ? "（整桌）" : ""}</div>
           <div className="num mt-0.5 text-xl font-bold">
             约 {estimate.totalKcal} kcal
@@ -203,7 +203,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
       )}
 
       {questions.length > 0 && (
-        <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
+        <section className="card">
           <p className="mb-3 text-sm text-faint">回答一下会更准，也可以直接跳过</p>
           {questions.map((q, i) => (
             <div key={i} className="mb-4 last:mb-0">
@@ -229,7 +229,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </section>
       )}
 
-      <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
+      <section className="card">
         <div className="grid grid-cols-4 gap-1 rounded-2xl bg-bg p-1">
           {MEAL_TYPES.map((t) => (
             <button
@@ -272,7 +272,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
       </section>
 
       {rows.map((row) => (
-        <section key={row.key} className="rounded-3xl border border-line bg-card p-4 shadow-card">
+        <section key={row.key} className="card">
           <div className="flex items-center gap-2">
             <input
               className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:font-normal placeholder:text-faint"

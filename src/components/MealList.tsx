@@ -16,9 +16,9 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
         return (
           <div key={type} className="py-2.5 first:pt-0 last:pb-0 lg:py-4">
             <div className="flex items-center">
-              <h3 className="flex-1 text-[15px] font-semibold">{MEAL_LABELS[type]}</h3>
+              <h3 className="flex-1 text-[15px] font-bold">{MEAL_LABELS[type]}</h3>
               {list.length > 0 ? (
-                <span className="num text-sm text-muted">{kcal} kcal</span>
+                <span className="num text-sm font-medium text-muted">{kcal} kcal</span>
               ) : (
                 <span className="text-sm text-faint">未记录</span>
               )}
@@ -32,7 +32,7 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
               </Link>
             </div>
             {list.map((meal) => (
-              <Link key={meal.id} href={`/meal/${meal.id}`} className="mt-1.5 flex items-center gap-2.5 rounded-xl p-0.5 lg:mt-2 lg:gap-3 lg:hover:bg-bg active:bg-bg">
+              <Link key={meal.id} href={`/meal/${meal.id}`} className="mt-1.5 flex items-center gap-2.5 rounded-xl p-0.5 transition-colors lg:mt-2 lg:gap-3 lg:hover:bg-bg active:bg-bg">
                 {meal.thumbPath ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -47,13 +47,13 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate">{meal.title || meal.items.map((i) => i.name).join("、")}</span>
+                  <span className="block truncate font-medium">{meal.title || meal.items.map((i) => i.name).join("、")}</span>
                   <span className="num block text-[13px] text-faint">
                     {timeFmt.format(meal.eatenAt)} · 蛋白质 {Math.round(meal.totals.proteinG)} g
                     {meal.sharePeople > 1 && ` · ${meal.sharePeople} 人分食`}
                   </span>
                 </span>
-                <span className="num shrink-0 font-semibold">{meal.totals.kcal}</span>
+                <span className="num shrink-0 font-bold">{meal.totals.kcal}</span>
               </Link>
             ))}
           </div>

@@ -28,7 +28,7 @@ export function DescribeMeal({ date, isToday }: { date: string; isToday: boolean
   }
 
   return (
-    <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
+    <section className="card">
       <h2 className="mb-3 font-semibold">说一下吃了什么</h2>
       <textarea
         className="field min-h-24 resize-none"

@@ -28,7 +28,7 @@ export function AppNav() {
         <Link
           href={t.href}
           aria-current={active ? "page" : undefined}
-          className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] ${active ? "font-semibold text-accent" : "text-faint"}`}
+          className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] transition-colors ${active ? "font-bold text-accent" : "font-medium text-muted hover:text-ink"}`}
         >
           <t.icon size={22} strokeWidth={active ? 2.4 : 2} />
           {t.label}
@@ -45,7 +45,7 @@ export function AppNav() {
           <button
             aria-label="拍一顿"
             onClick={() => capture.openCamera()}
-            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg ring-4 ring-bg transition active:scale-95"
+            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg ring-4 ring-bg transition duration-200 hover:brightness-110 active:scale-90"
           >
             <Camera size={25} />
           </button>

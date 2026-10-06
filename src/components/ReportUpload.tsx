@@ -63,7 +63,7 @@ export function ReportUpload() {
     : [];
 
   return (
-    <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
+    <section className="card">
       <input
         ref={input}
         type="file"

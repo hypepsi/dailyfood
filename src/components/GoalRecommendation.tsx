@@ -34,7 +34,7 @@ export function GoalRecommendation({ profile, recommended, basis }: Props) {
   }
 
   return (
-    <section className="rounded-3xl bg-tint p-4 text-accent-deep lg:p-6">
+    <section className="card-tint">
       <h2 className="text-sm font-semibold">按最新身体数据推荐</h2>
       <div className="num mt-2 flex gap-8">
         <div>

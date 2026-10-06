@@ -1,34 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #faf8f5;
+  --bg: #f4f1eb;
   --card: #ffffff;
-  --ink: #2b2a28;
-  --muted: #77736c;
-  --faint: #a8a39b;
-  --line: #ece8e1;
-  --accent: #1a9b7a;
-  --accent-deep: #0d5a47;
-  --tint: #e6f5f0;
-  --warn: #c2571a;
-  --warn-tint: #fdf0e6;
-  --shadow: 0 1px 2px rgba(60, 50, 30, 0.04), 0 8px 24px rgba(60, 50, 30, 0.06);
+  --ink: #1d1c1a;
+  --muted: #5e5a53;
+  --faint: #8b867d;
+  --line: #e3ded4;
+  --accent: #108a6c;
+  --accent-deep: #094c3c;
+  --tint: #dff2ec;
+  --track: #e2ece8;
+  --warn: #b84a12;
+  --warn-tint: #fbe9da;
+  --shadow: 0 1px 2px rgba(50, 40, 20, 0.07), 0 6px 16px -4px rgba(50, 40, 20, 0.1), 0 18px 36px -18px rgba(50, 40, 20, 0.14);
+  --shadow-lift: 0 2px 4px rgba(50, 40, 20, 0.08), 0 14px 28px -6px rgba(50, 40, 20, 0.16), 0 28px 48px -20px rgba(50, 40, 20, 0.2);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131514;
-    --card: #1c1f1e;
-    --ink: #ecebe8;
-    --muted: #a09d97;
-    --faint: #6f6d68;
-    --line: #2a2e2c;
-    --accent: #3cc7a2;
-    --accent-deep: #7fe0c4;
-    --tint: #1b3a32;
-    --warn: #f0935a;
-    --warn-tint: #3a2618;
-    --shadow: none;
+    --bg: #101211;
+    --card: #1b1e1d;
+    --ink: #f1f0ed;
+    --muted: #b3b0aa;
+    --faint: #85827c;
+    --line: #2e3331;
+    --accent: #3ccaa4;
+    --accent-deep: #8fe6cc;
+    --tint: #1a3b32;
+    --track: #262c2a;
+    --warn: #f39a63;
+    --warn-tint: #3d2716;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+    --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.5), 0 18px 36px -10px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -42,11 +47,13 @@
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-tint: var(--tint);
+  --color-track: var(--track);
   --color-warn: var(--warn);
   --color-warn-tint: var(--warn-tint);
   --shadow-card: var(--shadow);
-  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC",
-    "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+  /* 数字和英文用 Inter，中文用各系统自带的黑体 */
+  --font-sans: var(--font-inter), "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC",
+    "Source Han Sans SC", system-ui, sans-serif;
 }
 
 html {
@@ -56,6 +63,7 @@ html {
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 @media (min-width: 1024px) {
@@ -67,6 +75,8 @@ html {
 body {
   min-height: 100dvh;
   font-family: var(--font-sans);
+  /* 正文用中等字重：常规字重的中文在很多屏幕上显得发虚 */
+  font-weight: 500;
   overscroll-behavior-y: none;
 }
 
@@ -75,20 +85,146 @@ textarea,
 select {
   /* 16px 以上，避免手机浏览器聚焦时自动放大页面 */
   font-size: 16px;
+  font-weight: 500;
 }
 
 .num {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 动效：全站统一一套 ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
 @layer components {
+  /*
+   * 卡片：全站只有这一种（白底）和 card-tint（浅绿底）两种外观，
+   * 共用同一套入场、悬停和按压效果。
+   */
+  .card,
+  .card-tint {
+    @apply rounded-3xl p-4 lg:p-6;
+    animation: rise 0.5s var(--ease) backwards;
+    transition:
+      transform 0.25s var(--ease),
+      box-shadow 0.25s var(--ease),
+      border-color 0.25s var(--ease);
+  }
+  .card {
+    @apply border border-line bg-card shadow-card;
+  }
+  .card-tint {
+    @apply bg-tint text-accent-deep;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  /* 设置页那种一行一项的列表卡片 */
+  .card-list {
+    @apply px-4 py-1.5 lg:px-6 lg:py-2;
+  }
+  .card-flush {
+    @apply p-0 lg:p-0;
+  }
+
+  /* 同一页里的卡片依次出现 */
+  :is(.card, .card-tint):nth-child(2) {
+    animation-delay: 0.05s;
+  }
+  :is(.card, .card-tint):nth-child(3) {
+    animation-delay: 0.1s;
+  }
+  :is(.card, .card-tint):nth-child(4) {
+    animation-delay: 0.15s;
+  }
+  :is(.card, .card-tint):nth-child(5) {
+    animation-delay: 0.2s;
+  }
+  :is(.card, .card-tint):nth-child(n + 6) {
+    animation-delay: 0.25s;
+  }
+
+  @media (hover: hover) {
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+      border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
+    }
+    .card-tint:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .icon-tile {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-tint text-accent lg:h-10 lg:w-10;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  .bar-fill {
+    transform-origin: left;
+    animation: grow 0.8s var(--ease) 0.15s backwards;
+  }
+
   .field {
-    @apply w-full rounded-2xl border border-line bg-bg px-4 py-3 text-ink outline-none transition-colors placeholder:text-faint focus:border-accent;
+    @apply w-full rounded-2xl border border-line bg-bg px-4 py-3 text-ink outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-faint focus:border-accent;
+  }
+  .field:focus {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2 rounded-2xl transition duration-200 active:scale-[0.97] disabled:opacity-50;
+    transition-timing-function: var(--ease);
   }
   .btn-primary {
-    @apply flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3.5 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50;
+    @apply bg-accent px-5 py-3.5 text-base font-bold text-white;
+    box-shadow:
+      0 1px 2px rgba(9, 76, 60, 0.3),
+      0 8px 18px -6px color-mix(in srgb, var(--accent) 55%, transparent);
   }
   .btn-secondary {
-    @apply flex items-center justify-center gap-2 rounded-2xl border border-line bg-card px-3 py-2.5 text-sm font-medium text-ink transition active:scale-[0.98] disabled:opacity-50;
+    @apply border border-line bg-card px-3 py-2.5 text-sm font-semibold text-ink shadow-card;
+  }
+  @media (hover: hover) {
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+    }
+  }
+}
+
+/* 切换页面时内容淡入 */
+main {
+  animation: fade 0.3s ease-out;
+}
+
+/* 系统里开了“减少动态效果”的用户不播放动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
   }
 }

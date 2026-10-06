@@ -35,7 +35,7 @@ export default async function WeightPage() {
         <div className="space-y-3 lg:space-y-4">
           <ReportUpload />
 
-          <details className="rounded-3xl border border-line bg-card shadow-card">
+          <details className="card card-flush">
             <summary className="cursor-pointer list-none px-4 py-3 text-center text-sm text-muted">没有报告？手动输入</summary>
             <div className="px-4 pb-4">
               <WeightForm today={today} lastWeight={getLatest(user, "weightKg")?.value ?? null} />

@@ -31,8 +31,8 @@ export default async function WeightPage() {
   return (
     <>
       <PageHeader title="身体数据" />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-5">
-        <div className="space-y-3 lg:space-y-5">
+      <div className="space-y-3 lg:space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           <ReportUpload />
 
           <details className="rounded-3xl border border-line bg-card shadow-card">

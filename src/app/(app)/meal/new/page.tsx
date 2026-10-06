@@ -1,6 +1,5 @@
 import { DescribeMeal } from "@/components/DescribeMeal";
 import { MealEditor } from "@/components/MealEditor";
-import { Narrow } from "@/components/Narrow";
 import { PageHeader } from "@/components/PageHeader";
 import { guessMealType } from "@/lib/nutrition";
 import { requireUser } from "@/lib/session";
@@ -16,13 +15,13 @@ export default async function NewMealPage({ searchParams }: { searchParams: Prom
   const mealType = mealTypeOf(query.type ?? "") ?? (isToday ? guessMealType(now.hour, now.minute) : "lunch");
 
   return (
-    <Narrow>
+    <>
       <PageHeader title="手动记录" backHref={isToday ? "/" : `/day/${date}`} />
       <div className="space-y-4">
         <DescribeMeal date={date} isToday={isToday} />
         <p className="pt-2 text-center text-sm text-faint">或者自己填写</p>
         <MealEditor mode="new" today={now.date} initial={{ mealType, date, time: isToday ? now.time : "12:00", items: [] }} />
       </div>
-    </Narrow>
+    </>
   );
 }

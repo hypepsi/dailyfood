@@ -282,8 +282,8 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </button>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:left-60">
-        <div className="mx-auto max-w-md px-4 py-3 lg:max-w-xl lg:px-0">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        <div className="mx-auto max-w-md px-4 py-3 lg:max-w-lg">
           {error && <p className="mb-2 text-sm text-warn">{error}</p>}
           <div className="flex items-center gap-4">
             <div className="flex-1">

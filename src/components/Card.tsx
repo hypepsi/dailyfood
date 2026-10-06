@@ -36,45 +36,6 @@ export function Card({ icon, title, action, children }: Props) {
   );
 }
 
-/** 首页并排的半宽卡片：一个标题、一个大数字、一条进度、一行说明 */
-export function MiniCard({
-  icon,
-  title,
-  href,
-  label,
-  value,
-  unit,
-  tone = "accent",
-  progress,
-  footer,
-}: {
-  icon: LucideIcon;
-  title: string;
-  href: string;
-  label: string;
-  value: string;
-  unit: string;
-  tone?: "accent" | "warn";
-  progress: { value: number; max: number };
-  footer: string;
-}) {
-  return (
-    <Link href={href} className="block rounded-3xl border border-line bg-card p-4 shadow-card transition-shadow active:bg-bg lg:p-6 lg:hover:shadow-lg">
-      <div className="flex items-center gap-2">
-        <IconTile icon={icon} />
-        <h2 className="text-base font-semibold lg:text-lg">{title}</h2>
-      </div>
-      <div className="mt-3 text-[13px] text-faint">{label}</div>
-      <div className={`num text-[2rem] font-bold leading-tight tracking-tight lg:text-[2.5rem] ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
-        {value}
-        <span className="ml-1 text-sm font-semibold">{unit}</span>
-      </div>
-      <ProgressBar {...progress} over={tone === "warn"} />
-      <div className="num mt-2 text-[13px] text-muted">{footer}</div>
-    </Link>
-  );
-}
-
 /** 卡片里的主数字 */
 export function BigStat({
   label,

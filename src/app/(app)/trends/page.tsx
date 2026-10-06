@@ -52,10 +52,10 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div>
-      <div className="mb-3 lg:mb-6 lg:flex lg:items-center lg:justify-between">
-        <h1 className="mb-3 text-center text-xl font-bold lg:mb-0 lg:text-2xl">趋势</h1>
+      <div className="mb-3 lg:mb-4">
+        <h1 className="mb-3 text-center text-xl font-bold lg:text-2xl">趋势</h1>
 
-        <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1 lg:w-80">
+        <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1">
           {RANGES.map((r) => (
             <Link
               key={r.key}
@@ -69,7 +69,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         </nav>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="space-y-3 lg:space-y-4">
         <Card icon={Scale} title="体重">
           {weightAvg.length === 0 ? (
             <Link href="/weight" className="block py-2 text-muted">

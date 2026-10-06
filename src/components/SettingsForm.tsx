@@ -72,7 +72,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
   }
 
   return (
-    <form onSubmit={save} className="space-y-3 lg:space-y-5">
+    <form onSubmit={save} className="space-y-3 lg:space-y-4">
       <section className="rounded-3xl border border-line bg-card px-4 py-1.5 shadow-card">
         <h2 className="pb-1 pt-3 text-sm font-semibold text-accent">目标</h2>
         <div className="divide-y divide-line">

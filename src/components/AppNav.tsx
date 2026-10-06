@@ -2,66 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartNoAxesColumn, CircleCheck, House, MessageCircle, Scale, UserRound } from "lucide-react";
+import { Camera, ChartNoAxesColumn, House, MessageCircle, UserRound, type LucideIcon } from "lucide-react";
+import { useCapture } from "./CaptureProvider";
 
-const TABS = [
-  { href: "/", label: "今天", icon: House, match: (p: string) => p === "/" || p.startsWith("/day") || p.startsWith("/meal") },
-  { href: "/trends", label: "趋势", icon: ChartNoAxesColumn, match: (p: string) => p.startsWith("/trends") },
-  { href: "/weight", label: "身体数据", icon: Scale, match: (p: string) => p.startsWith("/weight"), desktopOnly: true },
-  { href: "/chat", label: "问 AI", icon: MessageCircle, match: (p: string) => p.startsWith("/chat") },
-  { href: "/settings", label: "我的", icon: UserRound, match: (p: string) => p.startsWith("/settings") },
+type Tab = { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean };
+
+const LEFT: Tab[] = [
+  { href: "/", label: "今天", icon: House, match: (p) => p === "/" || p.startsWith("/day") },
+  { href: "/trends", label: "趋势", icon: ChartNoAxesColumn, match: (p) => p.startsWith("/trends") },
+];
+const RIGHT: Tab[] = [
+  { href: "/chat", label: "问 AI", icon: MessageCircle, match: (p) => p.startsWith("/chat") },
+  { href: "/settings", label: "我的", icon: UserRound, match: (p) => p.startsWith("/settings") },
 ];
 
-/** 导航：手机上是底部标签栏，电脑上是左侧边栏 */
+/** 底部导航（手机和电脑相同）；正中间是随时可点的「拍一顿」 */
 export function AppNav() {
   const pathname = usePathname();
-  return (
-    <>
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        <ul className="mx-auto flex max-w-md">
-          {TABS.filter((t) => !t.desktopOnly).map((tab) => {
-            const active = tab.match(pathname);
-            return (
-              <li key={tab.href} className="flex-1">
-                <Link
-                  href={tab.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] ${active ? "font-semibold text-accent" : "text-faint"}`}
-                >
-                  <tab.icon size={22} strokeWidth={active ? 2.4 : 2} />
-                  {tab.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+  const capture = useCapture();
 
-      <nav className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-line bg-card px-4 py-7 lg:flex">
-        <Link href="/" className="mb-8 flex items-center gap-2.5 px-3 text-xl font-bold text-accent-deep">
-          <CircleCheck size={26} className="text-accent" />
-          LoseWeight
+  const tab = (t: Tab) => {
+    const active = t.match(pathname);
+    return (
+      <li key={t.href} className="flex-1">
+        <Link
+          href={t.href}
+          aria-current={active ? "page" : undefined}
+          className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] ${active ? "font-semibold text-accent" : "text-faint"}`}
+        >
+          <t.icon size={22} strokeWidth={active ? 2.4 : 2} />
+          {t.label}
         </Link>
-        <ul className="space-y-1">
-          {TABS.map((tab) => {
-            const active = tab.match(pathname);
-            return (
-              <li key={tab.href}>
-                <Link
-                  href={tab.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-base transition-colors ${
-                    active ? "bg-tint font-semibold text-accent-deep" : "text-muted hover:bg-bg hover:text-ink"
-                  }`}
-                >
-                  <tab.icon size={20} strokeWidth={active ? 2.4 : 2} className={active ? "text-accent" : ""} />
-                  {tab.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    </>
+      </li>
+    );
+  };
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <ul className="mx-auto flex max-w-md items-center lg:max-w-lg">
+        {LEFT.map(tab)}
+        <li className="flex flex-1 justify-center">
+          <button
+            aria-label="拍一顿"
+            onClick={() => capture.openCamera()}
+            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg ring-4 ring-bg transition active:scale-95"
+          >
+            <Camera size={25} />
+          </button>
+        </li>
+        {RIGHT.map(tab)}
+      </ul>
+    </nav>
   );
 }

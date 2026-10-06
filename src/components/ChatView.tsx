@@ -47,7 +47,7 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-11rem)] flex-col lg:mx-auto lg:max-w-xl">
+    <div className="flex min-h-[calc(100dvh-11rem)] flex-col">
       <header className="mb-4 flex items-center">
         <span className="w-12" />
         <h1 className="flex-1 text-center text-xl font-bold">问 AI</h1>
@@ -90,13 +90,13 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
       </div>
 
       <form
-        className="fixed inset-x-0 bottom-[calc(3.6rem+env(safe-area-inset-bottom))] z-20 bg-bg/95 backdrop-blur lg:bottom-0 lg:left-60 lg:pb-4"
+        className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-20 bg-bg/95 backdrop-blur"
         onSubmit={(e) => {
           e.preventDefault();
           void send(text);
         }}
       >
-        <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2.5 lg:max-w-xl lg:px-0">
+        <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2.5 lg:max-w-lg">
           <input className="field flex-1 rounded-full bg-card" placeholder="问点什么…" maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
           <button aria-label="发送" disabled={busy || !text.trim()} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-white disabled:opacity-40">
             <ArrowUp size={22} />

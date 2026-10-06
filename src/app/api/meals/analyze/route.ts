@@ -1,4 +1,5 @@
 import { analyzeMeal } from "@/lib/ai/analyze-meal";
+import { MEAL_PROMPT_VERSION } from "@/lib/ai/prompts";
 import { currentModel } from "@/lib/ai/client";
 import { badRequest } from "@/lib/errors";
 import { api } from "@/lib/http";
@@ -29,7 +30,7 @@ export const POST = api({}, async ({ req, user }) => {
       source: stored ? "photo" : "text",
       title: estimate.title,
       items: estimate.items.map(({ confidence: _c, ...item }) => item),
-      aiEstimate: { text: text || null, answers: [], estimate },
+      aiEstimate: { text: text || null, answers: [], promptVersion: MEAL_PROMPT_VERSION, estimate },
       aiModel: currentModel(),
       imagePath: stored?.imagePath,
       thumbPath: stored?.thumbPath,

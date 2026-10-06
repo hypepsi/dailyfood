@@ -1,0 +1,1 @@
+ALTER TABLE `meal_items` ADD `personal` integer DEFAULT false NOT NULL;

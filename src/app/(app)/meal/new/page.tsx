@@ -20,7 +20,7 @@ export default async function NewMealPage({ searchParams }: { searchParams: Prom
       <div className="space-y-4">
         <DescribeMeal date={date} isToday={isToday} />
         <p className="pt-2 text-center text-sm text-faint">或者自己填写</p>
-        <MealEditor mode="new" today={now.date} initial={{ mealType, date, time: isToday ? now.time : "12:00", items: [] }} />
+        <MealEditor mode="new" today={now.date} initial={{ mealType, date, time: isToday ? now.time : "12:00", people: 1, items: [] }} />
       </div>
     </>
   );

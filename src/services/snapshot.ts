@@ -1,5 +1,6 @@
 import type { User } from "@/db/schema";
-import { MEAL_LABELS, estimateBmr, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
+import { ACTIVITY, KCAL_PER_KG, estimateEnergy, type BodyFacts } from "@/lib/goals";
+import { MEAL_LABELS, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { addDays, ageOn, localParts } from "@/lib/time";
 import { trendPerWeek, windowAverage } from "@/lib/weight";
 import { getConfirmedMeals, getDailyTotals, type MealWithItems } from "./meals";
@@ -63,10 +64,17 @@ export function buildSnapshot(user: User, now = Date.now()) {
   const waist = getLatest(user, "waistCm");
   const measuredBmr = getLatest(user, "bmrKcal");
   const age = user.birthDate ? ageOn(user.birthDate, local.date) : null;
-  const estimatedBmr =
-    user.sex && user.heightCm && age !== null && weight.latestKg
-      ? estimateBmr(user.sex, weight.latestKg, user.heightCm, age)
-      : null;
+  const facts: BodyFacts = {
+    sex: user.sex,
+    age,
+    heightCm: user.heightCm,
+    weightKg: weight.avg7Kg ?? weight.latestKg ?? getLatest(user, "weightKg")?.value ?? null,
+    bodyFatPct: bodyFat?.value ?? null,
+    measuredBmr: measuredBmr?.value ?? null,
+    activityLevel: user.activityLevel,
+    targetWeightKg: user.targetWeightKg,
+  };
+  const energy = estimateEnergy(facts);
   const avg = (pick: (d: Nutrients) => number) =>
     recentDays.length ? Math.round(recentDays.reduce((s, d) => s + pick(d), 0) / recentDays.length) : null;
 
@@ -85,7 +93,8 @@ export function buildSnapshot(user: User, now = Date.now()) {
     weight,
     bodyFat,
     waist,
-    bmr: measuredBmr ? { value: measuredBmr.value, source: "实测" } : estimatedBmr ? { value: estimatedBmr, source: "公式估算" } : null,
+    facts,
+    energy,
   };
 }
 
@@ -105,14 +114,20 @@ export function renderSnapshot(s: Snapshot): string {
   lines.push(
     `目标：每日热量 ${day.goals.calorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g，目标体重 ${fmt(day.goals.targetWeightKg, "kg")}`,
   );
-  if (s.bmr) lines.push(`基础代谢：约 ${Math.round(s.bmr.value)} kcal（${s.bmr.source}）`);
+  if (s.energy) {
+    lines.push(
+      `基础代谢：约 ${s.energy.bmr} kcal（${s.energy.bmrSource}）；估算每日总消耗：约 ${s.energy.tdee} kcal（活动水平：${ACTIVITY[s.facts.activityLevel].label}）`,
+    );
+    lines.push(`按每日目标摄入，理论缺口约 ${s.energy.tdee - day.goals.calorieTarget} kcal/天`);
+  }
 
   lines.push("", "【今天已确认的饮食】");
   if (day.meals.length === 0) lines.push("今天还没有任何记录。");
   for (const m of day.meals) {
     const time = localParts(m.eatenAt, s.timezone).time;
-    const items = m.items.map((i) => `${i.name}${i.quantity ? ` ${i.quantity}` : ""} ${Math.round(i.kcal)}kcal`).join("；");
-    lines.push(`- ${MEAL_LABELS[m.mealType]} ${time}：${m.totals.kcal} kcal，蛋白质 ${Math.round(m.totals.proteinG)} g（${items}）`);
+    const items = m.items.map((i) => `${i.name}${i.quantity ? ` ${i.quantity}` : ""}`).join("；");
+    const shared = m.sharePeople > 1 ? `；${m.sharePeople} 人分食，以下数字已是用户本人的一份` : "";
+    lines.push(`- ${MEAL_LABELS[m.mealType]} ${time}：${m.totals.kcal} kcal，蛋白质 ${Math.round(m.totals.proteinG)} g（${items}${shared}）`);
   }
   lines.push(
     `今日合计：${day.totals.kcal} kcal，蛋白质 ${Math.round(day.totals.proteinG)} g，碳水 ${Math.round(day.totals.carbsG)} g，脂肪 ${Math.round(day.totals.fatG)} g`,
@@ -133,6 +148,10 @@ export function renderSnapshot(s: Snapshot): string {
   else {
     lines.push(`有记录 ${recent.loggedDays} 天，日均 ${recent.avgKcal} kcal，日均蛋白质 ${recent.avgProteinG} g`);
     lines.push(recent.days.map((d) => `${d.date.slice(5)}: ${d.kcal}kcal/${Math.round(d.proteinG)}g蛋白`).join("，"));
+    if (s.energy && recent.avgKcal !== null && recent.loggedDays >= 7) {
+      const perWeek = ((recent.avgKcal - s.energy.tdee) * 7) / KCAL_PER_KG;
+      lines.push(`按记录的日均摄入和估算消耗，理论上体重每周变化约 ${perWeek > 0 ? "+" : ""}${perWeek.toFixed(2)} kg（前提是记录完整）`);
+    }
     lines.push("注意：某天的记录可能不完整（漏记），数值明显偏低的日子不代表真的吃得少。");
   }
 

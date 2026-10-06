@@ -19,6 +19,7 @@ export const itemInput = z.object({
   proteinG: grams.default(0),
   carbsG: grams.default(0),
   fatG: grams.default(0),
+  personal: z.boolean().default(false),
 });
 export type ItemInput = z.infer<typeof itemInput>;
 
@@ -27,14 +28,21 @@ export const mealInput = z.object({
   date: z.string().refine(isDateString),
   time: z.string().refine(isTimeString),
   title: z.string().trim().max(60).default(""),
+  /** 几个人一起吃；1 表示自己一个人吃 */
+  people: z.number().int().min(1).max(20).default(1),
   items: z.array(itemInput).min(1).max(30),
 });
 export type MealInput = z.infer<typeof mealInput>;
 
 export type MealWithItems = Meal & { items: MealItem[]; totals: Nutrients };
 
+/** 明细按整桌保存；多人分食时合吃的项目 ÷ 人数，自己单独吃的项目全算，由程序计算 */
 function withTotals(meal: Meal, items: MealItem[]): MealWithItems {
-  return { ...meal, items, totals: sumNutrients(items) };
+  const mine = items.map((i) => {
+    const share = i.personal ? 1 : 1 / meal.sharePeople;
+    return { kcal: i.kcal * share, proteinG: i.proteinG * share, carbsG: i.carbsG * share, fatG: i.fatG * share };
+  });
+  return { ...meal, items, totals: sumNutrients(mine) };
 }
 
 function replaceItems(tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0], mealId: number, items: ItemInput[]) {
@@ -128,6 +136,7 @@ export function createManualMeal(user: User, input: MealInput): number {
         localDate: input.date,
         eatenAt: zonedToUtc(input.date, input.time, user.timezone),
         mealType: input.mealType,
+        sharePeople: input.people,
         status: "confirmed",
         source: "manual",
         title: titleFor(input),
@@ -151,6 +160,7 @@ export function saveMeal(user: User, mealId: number, input: MealInput) {
     tx.update(meals)
       .set({
         mealType: input.mealType,
+        sharePeople: input.people,
         localDate: input.date,
         eatenAt: zonedToUtc(input.date, input.time, user.timezone),
         // 用户没改标题时保留原来的（例如 AI 起的名字）
@@ -225,13 +235,14 @@ export type DayTotals = Nutrients & { date: string; mealCount: number };
 
 /** from..to 每个有记录日期的合计，只统计已确认的饮食 */
 export function getDailyTotals(user: User, from: string, to: string): DayTotals[] {
+  const divisor = sql`(case when ${mealItems.personal} then 1 else ${meals.sharePeople} end)`;
   const rows = getDb()
     .select({
       date: meals.localDate,
-      kcal: sql<number>`coalesce(sum(${mealItems.kcal}), 0)`,
-      proteinG: sql<number>`coalesce(sum(${mealItems.proteinG}), 0)`,
-      carbsG: sql<number>`coalesce(sum(${mealItems.carbsG}), 0)`,
-      fatG: sql<number>`coalesce(sum(${mealItems.fatG}), 0)`,
+      kcal: sql<number>`coalesce(sum(${mealItems.kcal} * 1.0 / ${divisor}), 0)`,
+      proteinG: sql<number>`coalesce(sum(${mealItems.proteinG} * 1.0 / ${divisor}), 0)`,
+      carbsG: sql<number>`coalesce(sum(${mealItems.carbsG} * 1.0 / ${divisor}), 0)`,
+      fatG: sql<number>`coalesce(sum(${mealItems.fatG} * 1.0 / ${divisor}), 0)`,
       mealCount: sql<number>`count(distinct ${meals.id})`,
     })
     .from(meals)

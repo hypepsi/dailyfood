@@ -40,6 +40,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
     proteinG: item.proteinG,
     carbsG: item.carbsG,
     fatG: item.fatG,
+    personal: item.personal,
     // 置信度只在确认草稿时有意义，此时明细与 AI 结果一一对应
     confidence: isDraft ? estimate?.items[i]?.confidence : undefined,
   }));
@@ -56,10 +57,10 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
         mode={isDraft ? "draft" : "edit"}
         mealId={meal.id}
         today={today}
-        initial={{ mealType: meal.mealType, date: meal.localDate, time: localParts(meal.eatenAt, user.timezone).time, items }}
+        initial={{ mealType: meal.mealType, date: meal.localDate, time: localParts(meal.eatenAt, user.timezone).time, people: meal.sharePeople, items }}
         estimate={
           estimate
-            ? { totalKcal: estimate.totalKcal, kcalLow: estimate.kcalLow, kcalHigh: estimate.kcalHigh, note: estimate.note, questions: estimate.questions }
+            ? { totalKcal: estimate.totalKcal, kcalLow: estimate.kcalLow, kcalHigh: estimate.kcalHigh, note: estimate.note, peopleHint: estimate.peopleHint, questions: estimate.questions }
             : undefined
         }
       />

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { analyzeMeal } from "@/lib/ai/analyze-meal";
+import { MEAL_PROMPT_VERSION } from "@/lib/ai/prompts";
 import { AppError } from "@/lib/errors";
 import { api, idParam } from "@/lib/http";
 import { storage } from "@/lib/storage";
@@ -32,6 +33,6 @@ export const POST = api({ body }, async ({ user, body, params }) => {
   replaceDraftEstimate(user, id, {
     title: estimate.title,
     items: estimate.items.map(({ confidence: _c, ...item }) => item),
-    aiEstimate: { text: previous.text ?? null, answers: body.answers, estimate },
+    aiEstimate: { text: previous.text ?? null, answers: body.answers, promptVersion: MEAL_PROMPT_VERSION, estimate },
   });
 });

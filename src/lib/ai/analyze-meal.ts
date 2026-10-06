@@ -5,6 +5,7 @@ import { log } from "@/lib/logger";
 import { round1 } from "@/lib/nutrition";
 import type { ItemInput } from "@/services/meals";
 import { callModel, type AiContent } from "./client";
+import { MEAL_ANALYSIS } from "./prompts";
 
 const CONFIDENCE = ["high", "medium", "low"] as const;
 
@@ -12,7 +13,7 @@ const CONFIDENCE = ["high", "medium", "low"] as const;
 const JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["is_food", "title", "items", "kcal_low", "kcal_high", "questions", "note"],
+  required: ["is_food", "title", "items", "kcal_low", "kcal_high", "people_hint", "questions", "note"],
   properties: {
     is_food: { type: "boolean", description: "内容里是否有可以估算的食物或饮料" },
     title: { type: "string", description: "这顿饭的简短名称，不超过 12 个字" },
@@ -21,7 +22,7 @@ const JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "quantity", "weight_g", "kcal", "protein_g", "carbs_g", "fat_g", "confidence"],
+        required: ["name", "quantity", "weight_g", "kcal", "protein_g", "carbs_g", "fat_g", "personal", "confidence"],
         properties: {
           name: { type: "string" },
           quantity: { type: "string", description: "人能看懂的数量，如“2 个”“1 碗”“约半份”" },
@@ -30,12 +31,14 @@ const JSON_SCHEMA = {
           protein_g: { type: "number" },
           carbs_g: { type: "number" },
           fat_g: { type: "number" },
+          personal: { type: "boolean", description: "这一项是否明确只是用户一个人的份（如“我吃了一碗米饭”）；合吃的菜或无法判断填 false" },
           confidence: { type: "string", enum: CONFIDENCE },
         },
       },
     },
     kcal_low: { type: "number", description: "整顿饭总热量合理范围下限" },
     kcal_high: { type: "number", description: "整顿饭总热量合理范围上限" },
+    people_hint: { type: "integer", description: "这些食物大约是几个人的量；一人份填 1" },
     questions: {
       type: "array",
       description: "最多 2 个；没有显著影响就留空",
@@ -65,11 +68,13 @@ const modelOutput = z.object({
       protein_g: z.number(),
       carbs_g: z.number(),
       fat_g: z.number(),
+      personal: z.boolean(),
       confidence: z.enum(CONFIDENCE),
     }),
   ),
   kcal_low: z.number(),
   kcal_high: z.number(),
+  people_hint: z.number(),
   questions: z.array(z.object({ question: z.string(), options: z.array(z.string()) })),
   note: z.string(),
 });
@@ -80,29 +85,23 @@ export type MealEstimate = {
   totalKcal: number;
   kcalLow: number;
   kcalHigh: number;
+  /** AI 觉得这像几个人的量；只用于界面提示，不自动分摊 */
+  peopleHint: number;
   questions: { question: string; options: string[] }[];
   note: string;
 };
 
-const INSTRUCTIONS = `你是一个严谨的食物营养估算助手，服务于中国用户的减脂饮食记录。
-
-任务：根据照片或文字描述，识别这顿饭里的每一种食物和饮料，估算份量和营养。
-
-规则：
-- 分开摆放的每种食物单独一项，不要合并成一个总数。例如“玉米、鸡蛋两个、无花果两个、豆浆”应该是 4 项。
-- 一道菜算一项，不要拆成配料。例如“番茄炒蛋”是一项，“石锅拌饭”是一项（名称里可注明含米饭）；盖饭、套餐这类可以拆成“主食”和各个“菜”。一顿饭通常是 1~6 项。
-- 调料、葱花、芝麻这类热量很小的东西并入所在的菜，不要单列。
-- 同一种食物有多个时合成一项，在 quantity 里写数量（如“2 个”）。
-- weight_g 是可食部分的重量，kcal 和三大营养素对应这一项的全部份量，不是每 100 克。
-- 按中国常见做法和常见份量估算。炒菜、油炸、红烧类要把烹调用油算进去。
-- 不要假装精确。kcal_low 和 kcal_high 给出整顿饭总热量的合理范围：看得清、份量明确时范围窄一些，油量、份量看不清时范围要宽。
-- confidence 表示对这一项的把握：high=种类和份量都清楚；medium=种类清楚但份量靠估；low=种类或做法不确定。
-- 只有当某个信息无法从内容判断、并且会让总热量相差约 15% 以上时才提问（例如油量、是否含糖、饮料容量、肉的部位、主食份量）。最多 2 个问题，每个问题给 2~4 个简短选项。不重要就不要问。
-- 如果用户已经回答过补充问题，按回答修正估算，不要再重复提问。
-- 照片里的餐具、调料瓶、未入口的装饰物不算食物。如果完全没有食物，is_food 返回 false，items 返回空数组。
-- 所有文字用简体中文。`;
-
 const clamp = (n: number, max: number) => Math.min(Math.max(n, 0), max);
+
+/**
+ * 蛋白质×4 + 碳水×4 + 脂肪×9 应大致等于热量。
+ * 相差超过 35%（且不是很小的数）说明这一项估算自相矛盾，标成“不太确定”提醒用户核对。
+ */
+function macrosMatchKcal(i: { kcal: number; proteinG: number; carbsG: number; fatG: number }): boolean {
+  const fromMacros = i.proteinG * 4 + i.carbsG * 4 + i.fatG * 9;
+  const diff = Math.abs(fromMacros - i.kcal);
+  return diff <= 40 || diff <= Math.max(i.kcal, fromMacros) * 0.35;
+}
 
 /** 校验并规范化模型输出。总热量由程序按各项相加，不采用模型自己算的总数 */
 export function normalizeEstimate(raw: unknown): MealEstimate {
@@ -118,8 +117,10 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
       proteinG: round1(clamp(i.protein_g, 1000)),
       carbsG: round1(clamp(i.carbs_g, 1000)),
       fatG: round1(clamp(i.fat_g, 1000)),
+      personal: i.personal,
       confidence: i.confidence,
-    }));
+    }))
+    .map((i) => (macrosMatchKcal(i) ? i : { ...i, confidence: "low" as const }));
   if (!parsed.is_food || items.length === 0) {
     throw new AppError(422, "no_food", "没有识别出食物，请重新拍一张，或改用手动记录");
   }
@@ -137,6 +138,7 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
     totalKcal,
     kcalLow,
     kcalHigh,
+    peopleHint: Math.min(Math.max(Math.round(parsed.people_hint), 1), 12),
     questions: parsed.questions
       .filter((q) => q.question.trim() && q.options.length >= 2)
       .slice(0, 2)
@@ -175,7 +177,7 @@ export async function analyzeMeal(user: User, input: AnalyzeInput): Promise<Meal
   const output = await callModel({
     user,
     kind: "analyze",
-    instructions: INSTRUCTIONS,
+    instructions: MEAL_ANALYSIS,
     input: [{ role: "user", content }],
     jsonSchema: { name: "meal_estimate", schema: JSON_SCHEMA },
     maxOutputTokens: 3000,

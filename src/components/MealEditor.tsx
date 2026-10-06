@@ -15,6 +15,7 @@ export type EditorItem = {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  personal?: boolean;
   confidence?: "high" | "medium" | "low";
 };
 
@@ -23,8 +24,8 @@ type Props = {
   mode: "draft" | "edit" | "new";
   mealId?: number;
   today: string;
-  initial: { mealType: MealType; date: string; time: string; items: EditorItem[] };
-  estimate?: { totalKcal: number; kcalLow: number; kcalHigh: number; note: string; questions: { question: string; options: string[] }[] };
+  initial: { mealType: MealType; date: string; time: string; people: number; items: EditorItem[] };
+  estimate?: { totalKcal: number; kcalLow: number; kcalHigh: number; note: string; peopleHint?: number; questions: { question: string; options: string[] }[] };
 };
 
 type Row = {
@@ -36,6 +37,8 @@ type Row = {
   protein: string;
   carbs: string;
   fat: string;
+  /** 多人分食时，这一项只有自己吃 */
+  personal: boolean;
   confidence?: EditorItem["confidence"];
   open: boolean;
   /** 改重量时按这组数值等比例换算 */
@@ -55,13 +58,14 @@ function toRow(item: EditorItem): Row {
     protein: str(item.proteinG),
     carbs: str(item.carbsG),
     fat: str(item.fatG),
+    personal: item.personal ?? false,
     confidence: item.confidence,
     open: false,
     base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
   };
 }
 
-const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", open: true, base: null });
+const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", personal: false, open: true, base: null });
 
 const num = (s: string) => parseNumber(s) ?? 0;
 
@@ -75,17 +79,22 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
   const [mealType, setMealType] = useState(initial.mealType);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
+  const [people, setPeople] = useState(initial.people);
   const [rows, setRows] = useState<Row[]>(() => (initial.items.length ? initial.items.map(toRow) : [emptyRow()]));
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<"" | "save" | "refine" | "delete">("");
   const [error, setError] = useState("");
 
+  // 明细是整桌的量；“我的份”= 整桌 ÷ 人数
+  const tableKcal = Math.round(rows.reduce((s, r) => s + num(r.kcal), 0));
+  const mine = (pick: (r: Row) => string) => rows.reduce((s, r) => s + num(pick(r)) / (r.personal ? 1 : people), 0);
   const total = {
-    kcal: Math.round(rows.reduce((s, r) => s + num(r.kcal), 0)),
-    protein: round1(rows.reduce((s, r) => s + num(r.protein), 0)),
-    carbs: round1(rows.reduce((s, r) => s + num(r.carbs), 0)),
-    fat: round1(rows.reduce((s, r) => s + num(r.fat), 0)),
+    kcal: Math.round(mine((r) => r.kcal)),
+    protein: round1(mine((r) => r.protein)),
+    carbs: round1(mine((r) => r.carbs)),
+    fat: round1(mine((r) => r.fat)),
   };
+  const hint = estimate?.peopleHint ?? 1;
 
   function update(key: number, patch: Partial<Row>) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -129,6 +138,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         proteinG: num(r.protein),
         carbsG: num(r.carbs),
         fatG: num(r.fat),
+        personal: people > 1 && r.personal,
       });
     }
     if (items.length === 0) return setError("至少保留一项食物");
@@ -136,7 +146,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
 
     setBusy("save");
     try {
-      const payload = { mealType, date, time, items };
+      const payload = { mealType, date, time, people, items };
       if (mode === "new") await request("POST", "/api/meals", payload);
       else await request("PUT", `/api/meals/${mealId}`, payload);
       router.push(date === today ? "/" : `/day/${date}`);
@@ -181,7 +191,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
     <div className="space-y-3 pb-24">
       {estimate && (
         <section className="rounded-3xl bg-tint p-4 text-accent-deep">
-          <div className="text-sm opacity-80">AI 估算</div>
+          <div className="text-sm opacity-80">AI 估算{hint > 1 ? "（整桌）" : ""}</div>
           <div className="num mt-0.5 text-xl font-bold">
             约 {estimate.totalKcal} kcal
             <span className="ml-2 text-sm font-medium opacity-80">
@@ -235,6 +245,30 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
           <input type="date" className="field flex-1" value={date} max={today} onChange={(e) => setDate(e.target.value)} aria-label="日期" />
           <input type="time" className="field w-36" value={time} onChange={(e) => setTime(e.target.value)} aria-label="时间" />
         </div>
+
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="flex items-baseline justify-between">
+            <span className="font-medium">几个人一起吃？</span>
+            {mode === "draft" && hint > 1 && people === 1 && <span className="text-[13px] text-warn">看起来像 {hint} 人的量</span>}
+          </div>
+          <div className="mt-2 grid grid-cols-6 gap-1.5">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                onClick={() => setPeople(n)}
+                aria-pressed={people === n}
+                className={`rounded-xl border py-2 text-sm ${people === n ? "border-accent bg-accent font-semibold text-white" : "border-line bg-bg text-muted"}`}
+              >
+                {n === 1 ? "就我" : `${n} 人`}
+              </button>
+            ))}
+          </div>
+          {people > 1 && (
+            <p className="num mt-2 text-[13px] text-muted">
+              下面按整桌填写，合吃的菜平均分成 {people} 份，只计入你的一份；自己单独吃的（比如自己那碗饭）点一下「合吃」改成「我自己的」。
+            </p>
+          )}
+        </div>
       </section>
 
       {rows.map((row) => (
@@ -246,6 +280,14 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
               value={row.name}
               onChange={(e) => update(row.key, { name: e.target.value })}
             />
+            {people > 1 && (
+              <button
+                onClick={() => update(row.key, { personal: !row.personal })}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-xs ${row.personal ? "border-accent bg-tint text-accent-deep" : "border-line text-muted"}`}
+              >
+                {row.personal ? "我自己的" : "合吃"}
+              </button>
+            )}
             {row.confidence === "low" && <span className="shrink-0 rounded-full bg-warn-tint px-2.5 py-1 text-xs text-warn">不太确定</span>}
             <button aria-label="删除这一项" className="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-faint active:bg-line" onClick={() => setRows((rs) => rs.filter((r) => r.key !== row.key))}>
               <Trash2 size={18} />
@@ -291,7 +333,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
                 {total.kcal} <span className="text-sm font-semibold">kcal</span>
               </div>
               <div className="num text-xs text-faint">
-                蛋白 {total.protein} · 碳水 {total.carbs} · 脂肪 {total.fat} g
+                {people > 1 ? `我的一份 · 整桌共 ${tableKcal} kcal · ${people} 人` : `蛋白 ${total.protein} · 碳水 ${total.carbs} · 脂肪 ${total.fat} g`}
               </div>
             </div>
             <button className="btn-primary px-8" onClick={save} disabled={busy !== ""}>

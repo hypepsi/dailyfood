@@ -15,6 +15,20 @@
       "when": 1791257446084,
       "tag": "0001_modern_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791258854238,
+      "tag": "0002_cuddly_edwin_jarvis",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791259094257,
+      "tag": "0003_lonely_marauders",
+      "breakpoints": true
     }
   ]
 }

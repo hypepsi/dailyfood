@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ActivityLevel } from "@/db/schema";
 import { parseNumber, request } from "@/lib/client-api";
+import { ACTIVITY } from "@/lib/goals";
 
 export type ProfileValues = {
   displayName: string;
@@ -10,6 +12,7 @@ export type ProfileValues = {
   birthDate: string | null;
   heightCm: number | null;
   timezone: string;
+  activityLevel: ActivityLevel;
   calorieTarget: number;
   proteinTargetG: number;
   targetWeightKg: number | null;
@@ -60,6 +63,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
         birthDate: v.birthDate || null,
         heightCm: parseNumber(v.heightCm),
         timezone: v.timezone,
+        activityLevel: v.activityLevel,
         calorieTarget: Math.round(calorieTarget),
         proteinTargetG: Math.round(proteinTargetG),
         targetWeightKg: parseNumber(v.targetWeightKg),
@@ -106,6 +110,15 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
           </Row>
           <Row label="身高" hint="cm">
             <input className={inputClass} inputMode="decimal" value={v.heightCm} onChange={(e) => set({ heightCm: e.target.value })} />
+          </Row>
+          <Row label="活动水平" hint="用于估算每日消耗">
+            <select className={`${inputClass} w-44 text-left`} value={v.activityLevel} onChange={(e) => set({ activityLevel: e.target.value as ActivityLevel })}>
+              {(Object.keys(ACTIVITY) as ActivityLevel[]).map((k) => (
+                <option key={k} value={k}>
+                  {ACTIVITY[k].label}
+                </option>
+              ))}
+            </select>
           </Row>
           <Row label="时区" hint="决定每天从几点算起">
             <input className={`${inputClass} w-44`} value={v.timezone} autoCapitalize="none" onChange={(e) => set({ timezone: e.target.value })} />

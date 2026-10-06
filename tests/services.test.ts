@@ -21,8 +21,8 @@ function makeUser(username: string): User {
 }
 
 const DATE = "2026-10-06";
-const egg = { name: "鸡蛋", quantity: "2 个", weightG: 100, kcal: 150, proteinG: 13, carbsG: 1, fatG: 10 };
-const meal = (kcal: number): MealInput => ({ mealType: "breakfast", date: DATE, time: "08:00", title: "", items: [{ ...egg, kcal }] });
+const egg = { name: "鸡蛋", quantity: "2 个", weightG: 100, kcal: 150, proteinG: 13, carbsG: 1, fatG: 10, personal: false };
+const meal = (kcal: number, people = 1): MealInput => ({ mealType: "breakfast", date: DATE, time: "08:00", title: "", people, items: [{ ...egg, kcal }] });
 
 beforeEach(() => {
   db = openDb(":memory:");
@@ -62,6 +62,21 @@ describe("饮食记录", () => {
     expect(day.meals).toHaveLength(1);
   });
 
+  it("多人分食：明细存整桌，统计只计入自己的一份", () => {
+    const id = createManualMeal(user, meal(900, 3));
+    expect(getMeal(user, id).items[0].kcal).toBe(900);
+    expect(getMeal(user, id).totals.kcal).toBe(300);
+    expect(getDaySummary(user, DATE).totals.kcal).toBe(300);
+    expect(getDailyTotals(user, DATE, DATE)[0].kcal).toBe(300);
+    // 自己单独吃的一碗饭不分摊
+    saveMeal(user, id, { ...meal(900, 3), items: [{ ...egg, kcal: 900 }, { ...egg, name: "米饭", kcal: 174, personal: true }] });
+    expect(getMeal(user, id).totals.kcal).toBe(474);
+    expect(getDailyTotals(user, DATE, DATE)[0].kcal).toBe(474);
+    // 之后发现其实是两个人吃的
+    saveMeal(user, id, meal(900, 2));
+    expect(getDaySummary(user, DATE).kcalRemaining).toBe(1550);
+  });
+
   it("用户之间的数据互相不可见", () => {
     const id = createManualMeal(user, meal(700));
     expect(() => getMeal(other, id)).toThrow(AppError);
@@ -73,7 +88,7 @@ describe("饮食记录", () => {
 describe("目标与身体数据", () => {
   it("修改目标不改变过去日子的评价标准", () => {
     db.insert(schema.goalHistory).values({ userId: user.id, effectiveDate: "2026-09-01", calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85, createdAt: 0 }).run();
-    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
+    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
     expect(goalsForDate(user, "2026-09-15").calorieTarget).toBe(2000);
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1800);
   });

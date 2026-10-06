@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
 import { isDateString } from "@/lib/time";
 import { callModel } from "./client";
+import { BODY_REPORT_READING } from "./prompts";
 
 /** 模型输出字段 → 合理范围。超出范围的值视为读错，丢弃 */
 const FIELDS = {
@@ -64,15 +65,6 @@ const modelOutput = z.object({
   measured_date: z.string().nullable(),
   ...(Object.fromEntries(FIELD_NAMES.map((f) => [f, z.number().nullable()])) as Record<Field, z.ZodNullable<z.ZodNumber>>),
 });
-
-const INSTRUCTIONS = `你负责从体脂秤 App 的人体成分报告截图里抄录数字。
-
-规则：
-- 只抄图片上明确印出来的数值，原样抄写，不要换算、不要推算、不要估计。
-- 图片上没有的指标一律返回 null。
-- 注意区分名字相近的指标：肌肉量 ≠ 骨骼肌量；脂肪量(kg) ≠ 体脂率(%)；体水分量(kg) ≠ 身体水分(%)；蛋白质量(kg) ≠ 蛋白质率(%)；基础代谢率 ≠ 建议热量摄入。
-- 节段脂肪、节段肌肉这些分部位的数值不需要。
-- 如果图片根本不是体重或人体成分数据，is_report 返回 false。`;
 
 export type BodyReport = {
   /** 报告上的测量日期；没有则为 null，由调用方决定用哪天 */
@@ -152,7 +144,7 @@ export async function readBodyReport(user: User, image: Buffer): Promise<BodyRep
   const output = await callModel({
     user,
     kind: "report",
-    instructions: INSTRUCTIONS,
+    instructions: BODY_REPORT_READING,
     input: [
       {
         role: "user",

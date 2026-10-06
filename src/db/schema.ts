@@ -7,6 +7,9 @@ const userId = () =>
     .notNull()
     .references(() => users.id, { onDelete: "cascade" });
 
+export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "active"] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+
 export const users = sqliteTable("users", {
   id: id(),
   username: text("username").notNull().unique(),
@@ -16,6 +19,7 @@ export const users = sqliteTable("users", {
   birthDate: text("birth_date"), // YYYY-MM-DD
   heightCm: real("height_cm"),
   timezone: text("timezone").notNull().default("Asia/Shanghai"),
+  activityLevel: text("activity_level", { enum: ACTIVITY_LEVELS }).notNull().default("light"),
   calorieTarget: integer("calorie_target").notNull(),
   proteinTargetG: integer("protein_target_g").notNull(),
   targetWeightKg: real("target_weight_kg"),
@@ -64,6 +68,8 @@ export const meals = sqliteTable(
     status: text("status", { enum: ["draft", "confirmed"] }).notNull(),
     source: text("source", { enum: ["photo", "text", "manual"] }).notNull(),
     title: text("title").notNull().default(""),
+    /** 几个人一起吃。明细按整桌保存，计入统计时除以人数 */
+    sharePeople: integer("share_people").notNull().default(1),
     imagePath: text("image_path"),
     thumbPath: text("thumb_path"),
     /** AI 原始估算（JSON），只留档追溯，统计不读它 */
@@ -92,6 +98,8 @@ export const mealItems = sqliteTable(
     proteinG: real("protein_g").notNull().default(0),
     carbsG: real("carbs_g").notNull().default(0),
     fatG: real("fat_g").notNull().default(0),
+    /** 多人分食时，这一项是否只有用户自己吃（如自己的一碗饭），是则不按人数分摊 */
+    personal: integer("personal", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [index("meal_items_meal_idx").on(t.mealId)],
 );

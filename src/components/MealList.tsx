@@ -48,6 +48,7 @@ export function MealList({ meals, date, timezone }: { meals: MealWithItems[]; da
                   <span className="block truncate">{meal.title || meal.items.map((i) => i.name).join("、")}</span>
                   <span className="num block text-[13px] text-faint">
                     {timeFmt.format(meal.eatenAt)} · 蛋白质 {Math.round(meal.totals.proteinG)} g
+                    {meal.sharePeople > 1 && ` · ${meal.sharePeople} 人分食`}
                   </span>
                 </span>
                 <span className="num shrink-0 font-semibold">{meal.totals.kcal}</span>

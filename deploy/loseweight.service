@@ -1,0 +1,26 @@
+[Unit]
+Description=LoseWeight web app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=loseweight
+Group=loseweight
+WorkingDirectory=/opt/loseweight
+EnvironmentFile=/etc/loseweight/env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=3
+MemoryMax=900M
+
+# 最小权限：只能写数据目录和 Next 缓存
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/loseweight /opt/loseweight/.next/cache
+
+[Install]
+WantedBy=multi-user.target

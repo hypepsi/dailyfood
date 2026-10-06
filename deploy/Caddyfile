@@ -1,0 +1,9 @@
+# 域名由 setup.sh 根据 /etc/loseweight/env 里的 APP_ORIGIN 填入
+{$LW_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 15MB
+	}
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy 127.0.0.1:3000
+}

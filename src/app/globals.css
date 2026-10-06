@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #faf8f5;
+  --card: #ffffff;
+  --ink: #2b2a28;
+  --muted: #77736c;
+  --faint: #a8a39b;
+  --line: #ece8e1;
+  --accent: #1a9b7a;
+  --accent-deep: #0d5a47;
+  --tint: #e6f5f0;
+  --warn: #c2571a;
+  --warn-tint: #fdf0e6;
+  --shadow: 0 1px 2px rgba(60, 50, 30, 0.04), 0 8px 24px rgba(60, 50, 30, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131514;
+    --card: #1c1f1e;
+    --ink: #ecebe8;
+    --muted: #a09d97;
+    --faint: #6f6d68;
+    --line: #2a2e2c;
+    --accent: #3cc7a2;
+    --accent-deep: #7fe0c4;
+    --tint: #1b3a32;
+    --warn: #f0935a;
+    --warn-tint: #3a2618;
+    --shadow: none;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-tint: var(--tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --shadow-card: var(--shadow);
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC",
+    "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+}
+
+input,
+textarea,
+select {
+  /* 16px 以上，避免手机浏览器聚焦时自动放大页面 */
+  font-size: 16px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-2xl border border-line bg-bg px-4 py-3 text-ink outline-none transition-colors placeholder:text-faint focus:border-accent;
+  }
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2 rounded-2xl border border-line bg-card px-4 py-3 text-sm font-medium text-ink transition active:scale-[0.98] disabled:opacity-50;
+  }
+}

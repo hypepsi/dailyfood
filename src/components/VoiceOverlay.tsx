@@ -107,7 +107,7 @@ export function VoiceOverlay({ title, onRecorded, onClose }: Props) {
   const finish = () => recorder.current?.state === "recording" && recorder.current.stop();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-center text-white">
+    <div data-no-pull className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-center text-white">
       {(phase === "starting" || phase === "recording") && (
         <>
           <span className={`flex h-24 w-24 items-center justify-center rounded-full bg-accent ${phase === "recording" ? "animate-pulse" : "opacity-50"}`}>

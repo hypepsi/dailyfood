@@ -101,7 +101,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
         />}
 
       {preview && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-white">
+        <div data-no-pull className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={preview} alt="" className={`max-h-[50dvh] rounded-3xl object-contain ${busy ? "animate-pulse" : ""}`} />
           {busy ? (

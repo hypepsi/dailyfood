@@ -1,9 +1,11 @@
 import type { User } from "@/db/schema";
-import { ACTIVITY, KCAL_PER_KG, estimateEnergy, type BodyFacts } from "@/lib/goals";
+import { dayBurn, fatGrams, loggingStreak, type DayBurn } from "@/lib/energy";
+import { ACTIVITY, estimateEnergy, type BodyFacts } from "@/lib/goals";
 import { MEAL_LABELS, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { addDays, ageOn, localParts } from "@/lib/time";
 import { trendPerWeek, windowAverage } from "@/lib/weight";
 import { getConfirmedMeals, getDailyTotals, type MealWithItems } from "./meals";
+import { getActivities } from "./activity";
 import { getDailySeries, getLatest } from "./metrics";
 import { goalsForDate, type Goals } from "./profile";
 
@@ -51,6 +53,65 @@ export function getWeightStats(user: User, date: string): WeightStats {
   };
 }
 
+/** 用户当前的身体参数，以及由此算出的基础代谢和按活动水平估算的每日消耗 */
+export function getEnergy(user: User, date: string, weight = getWeightStats(user, date)) {
+  const bodyFat = getLatest(user, "bodyFatPct");
+  const measuredBmr = getLatest(user, "bmrKcal");
+  const facts: BodyFacts = {
+    sex: user.sex,
+    age: user.birthDate ? ageOn(user.birthDate, date) : null,
+    heightCm: user.heightCm,
+    weightKg: weight.avg7Kg ?? weight.latestKg ?? getLatest(user, "weightKg")?.value ?? null,
+    bodyFatPct: bodyFat?.value ?? null,
+    measuredBmr: measuredBmr?.value ?? null,
+    activityLevel: user.activityLevel,
+    targetWeightKg: user.targetWeightKg,
+  };
+  return { facts, energy: estimateEnergy(facts), bodyFat };
+}
+
+export type DeficitDay = DayBurn & { date: string; intake: number; deficit: number };
+
+/**
+ * 热量差（消耗 − 摄入）汇总，全部由程序计算。
+ * 累计值只统计有饮食记录的日子：没记录的日子不知道吃了多少，不能当成全是缺口。
+ */
+export function getDeficitSummary(user: User, date: string, now = Date.now()) {
+  const local = localParts(now, user.timezone);
+  const { energy } = getEnergy(user, local.date);
+  if (!energy) return null;
+
+  const goals = goalsForDate(user, date);
+  const activities = getActivities(user);
+  const intakeByDate = new Map(getDailyTotals(user, "0000-01-01", local.date).map((d) => [d.date, d.kcal]));
+  const dayOf = (d: string): DeficitDay => {
+    const burn = dayBurn(energy, activities.get(d) ?? null);
+    const intake = intakeByDate.get(d) ?? 0;
+    return { ...burn, date: d, intake, deficit: burn.burn - intake };
+  };
+
+  const day = dayOf(date);
+  const isToday = date === local.date;
+  const dinnerLogged = isToday && getConfirmedMeals(user, date).some((m) => m.mealType === "dinner");
+  const logged = [...intakeByDate.keys()].filter((d) => d <= date).map(dayOf);
+  const weekStart = addDays(date, -6);
+  const week = logged.filter((d) => d.date >= weekStart);
+  const sum = (days: DeficitDay[]) => days.reduce((s, d) => s + d.deficit, 0);
+
+  return {
+    day,
+    /** 这一天算不算“吃完了”：过去的日子、今天 20 点以后、或已经记了晚餐 */
+    settled: !isToday || local.hour >= 20 || dinnerLogged,
+    /** 如果今天正好吃到目标，热量差会是多少 */
+    deficitAtTarget: day.burn - goals.calorieTarget,
+    week: { days: week.length, total: sum(week) },
+    allTime: { days: logged.length, total: sum(logged) },
+    streak: loggingStreak(new Set(intakeByDate.keys()), local.date, (d) => addDays(d, -1)),
+  };
+}
+
+export type DeficitSummary = NonNullable<ReturnType<typeof getDeficitSummary>>;
+
 /**
  * 交给 AI 的数据快照：全部来自数据库，全部由程序算好。
  * AI 只负责解释和建议，不负责回忆和计算。
@@ -60,21 +121,9 @@ export function buildSnapshot(user: User, now = Date.now()) {
   const day = getDaySummary(user, local.date);
   const recentDays = getDailyTotals(user, addDays(local.date, -14), addDays(local.date, -1));
   const weight = getWeightStats(user, local.date);
-  const bodyFat = getLatest(user, "bodyFatPct");
   const waist = getLatest(user, "waistCm");
-  const measuredBmr = getLatest(user, "bmrKcal");
-  const age = user.birthDate ? ageOn(user.birthDate, local.date) : null;
-  const facts: BodyFacts = {
-    sex: user.sex,
-    age,
-    heightCm: user.heightCm,
-    weightKg: weight.avg7Kg ?? weight.latestKg ?? getLatest(user, "weightKg")?.value ?? null,
-    bodyFatPct: bodyFat?.value ?? null,
-    measuredBmr: measuredBmr?.value ?? null,
-    activityLevel: user.activityLevel,
-    targetWeightKg: user.targetWeightKg,
-  };
-  const energy = estimateEnergy(facts);
+  const { facts, energy, bodyFat } = getEnergy(user, local.date, weight);
+  const deficit = getDeficitSummary(user, local.date, now);
   const avg = (pick: (d: Nutrients) => number) =>
     recentDays.length ? Math.round(recentDays.reduce((s, d) => s + pick(d), 0) / recentDays.length) : null;
 
@@ -82,7 +131,7 @@ export function buildSnapshot(user: User, now = Date.now()) {
     date: local.date,
     time: local.time,
     timezone: user.timezone,
-    profile: { name: user.displayName, sex: user.sex, age, heightCm: user.heightCm },
+    profile: { name: user.displayName, sex: user.sex, age: facts.age, heightCm: user.heightCm },
     day,
     recent: {
       days: recentDays,
@@ -95,6 +144,7 @@ export function buildSnapshot(user: User, now = Date.now()) {
     waist,
     facts,
     energy,
+    deficit,
   };
 }
 
@@ -116,9 +166,21 @@ export function renderSnapshot(s: Snapshot): string {
   );
   if (s.energy) {
     lines.push(
-      `基础代谢：约 ${s.energy.bmr} kcal（${s.energy.bmrSource}）；估算每日总消耗：约 ${s.energy.tdee} kcal（活动水平：${ACTIVITY[s.facts.activityLevel].label}）`,
+      `基础代谢：约 ${s.energy.bmr} kcal（${s.energy.bmrSource}）；没有手表数据的日子按活动水平估算每日消耗约 ${s.energy.tdee} kcal（${ACTIVITY[s.facts.activityLevel].label}）`,
     );
-    lines.push(`按每日目标摄入，理论缺口约 ${s.energy.tdee - day.goals.calorieTarget} kcal/天`);
+  }
+  if (s.deficit) {
+    const d = s.deficit;
+    lines.push(
+      d.day.source === "watch"
+        ? `今天的消耗：${d.day.burn} kcal（基础代谢 ${d.day.bmr} + 用户从手表录入的活动消耗 ${d.day.active}；一天没过完时这个数还会涨）`
+        : `今天的消耗：约 ${d.day.burn} kcal（今天没有录入手表数据，按活动水平估算）`,
+    );
+    lines.push(
+      `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`,
+    );
+    if (d.week.days > 0) lines.push(`近 7 天有记录的 ${d.week.days} 天累计热量差：${d.week.total} kcal，折合脂肪约 ${fatGrams(d.week.total)} g`);
+    lines.push(`连续记录天数：${d.streak}`);
   }
 
   lines.push("", "【今天已确认的饮食】");
@@ -148,10 +210,6 @@ export function renderSnapshot(s: Snapshot): string {
   else {
     lines.push(`有记录 ${recent.loggedDays} 天，日均 ${recent.avgKcal} kcal，日均蛋白质 ${recent.avgProteinG} g`);
     lines.push(recent.days.map((d) => `${d.date.slice(5)}: ${d.kcal}kcal/${Math.round(d.proteinG)}g蛋白`).join("，"));
-    if (s.energy && recent.avgKcal !== null && recent.loggedDays >= 7) {
-      const perWeek = ((recent.avgKcal - s.energy.tdee) * 7) / KCAL_PER_KG;
-      lines.push(`按记录的日均摄入和估算消耗，理论上体重每周变化约 ${perWeek > 0 ? "+" : ""}${perWeek.toFixed(2)} kg（前提是记录完整）`);
-    }
     lines.push("注意：某天的记录可能不完整（漏记），数值明显偏低的日子不代表真的吃得少。");
   }
 

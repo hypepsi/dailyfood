@@ -5,8 +5,12 @@ import { addDays, daysBetween, formatDateCn } from "@/lib/time";
 import { kgToJin, rollingAverage } from "@/lib/weight";
 import { getDailyTotals, getPendingDrafts } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
-import { getDaySummary, getWeightStats } from "@/services/snapshot";
+import { ACTIVITY } from "@/lib/goals";
+import { getActivities, lastActivityKind } from "@/services/activity";
+import { getDaySummary, getDeficitSummary, getEnergy, getWeightStats } from "@/services/snapshot";
+import { ActivityCard } from "./ActivityCard";
 import { AdviceCard } from "./AdviceCard";
+import { DeficitCard } from "./DeficitCard";
 import { BigStat, Card, ProgressBar, StatRow } from "./Card";
 import { CaptureActions } from "./CaptureActions";
 import { MealList } from "./MealList";
@@ -34,6 +38,9 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const weight = getWeightStats(user, today);
   const weightSeries = rollingAverage(getDailySeries(user, "weightKg", addDays(today, -29), today));
   const drafts = isToday ? getPendingDrafts(user) : [];
+  const deficit = getDeficitSummary(user, date);
+  const activity = getActivities(user, date, date).get(date) ?? null;
+  const { energy } = getEnergy(user, today);
   const toGoal = weight.avg7Kg !== null && goals.targetWeightKg !== null ? weight.avg7Kg - goals.targetWeightKg : null;
 
   return (
@@ -105,7 +112,19 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         />
       </Card>
 
-      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")} />}
+      <DeficitCard summary={deficit} isToday={isToday} />
+
+      <ActivityCard
+        key={`${date}:${activity?.kcal ?? ""}:${activity?.kind ?? ""}`}
+        date={date}
+        isToday={isToday}
+        burn={deficit?.day ?? null}
+        entry={activity}
+        defaultKind={lastActivityKind(user)}
+        estimateBasis={energy ? `基础代谢 ${energy.bmr} × 活动系数 ${ACTIVITY[user.activityLevel].factor}` : ""}
+      />
+
+      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={`${deficit?.day.burn ?? ""}|${day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}`} />}
       <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
         <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
       </Card>

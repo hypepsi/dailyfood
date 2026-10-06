@@ -50,7 +50,7 @@ export async function getDailyAdvice(user: User): Promise<string | null> {
   const snapshot = buildSnapshot(user);
   if (snapshot.day.meals.length === 0) return null;
   const dataHash = createHash("sha1")
-    .update(JSON.stringify([snapshot.day.goals, snapshot.day.meals.map((m) => [m.id, m.updatedAt, m.totals.kcal])]))
+    .update(JSON.stringify([snapshot.day.goals, snapshot.deficit?.day.burn, snapshot.day.meals.map((m) => [m.id, m.updatedAt, m.totals.kcal])]))
     .digest("hex");
   const where = and(eq(dailyAdvice.userId, user.id), eq(dailyAdvice.localDate, snapshot.date));
   const cached = db.select().from(dailyAdvice).where(where).get();

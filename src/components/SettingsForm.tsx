@@ -111,7 +111,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
           <Row label="身高" hint="cm">
             <input className={inputClass} inputMode="decimal" value={v.heightCm} onChange={(e) => set({ heightCm: e.target.value })} />
           </Row>
-          <Row label="活动水平" hint="用于估算每日消耗">
+          <Row label="活动水平" hint="没录手表消耗的日子按它估算">
             <select className={`${inputClass} w-44 text-left`} value={v.activityLevel} onChange={(e) => set({ activityLevel: e.target.value as ActivityLevel })}>
               {(Object.keys(ACTIVITY) as ActivityLevel[]).map((k) => (
                 <option key={k} value={k}>

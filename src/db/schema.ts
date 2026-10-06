@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const id = () => integer("id").primaryKey({ autoIncrement: true });
 const createdAt = () => integer("created_at").notNull(); // unix ms
@@ -128,6 +128,28 @@ export const bodyMetrics = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("body_metrics_user_date_idx").on(t.userId, t.localDate)],
+);
+
+export const ACTIVITY_KINDS = ["active", "total"] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+/**
+ * 用户从手表等设备抄来的当天消耗，每人每天一条。
+ * kind=active：活动消耗（不含基础代谢）；kind=total：全天总消耗（已含基础代谢）。
+ * 没有记录的日子按活动水平估算。
+ */
+export const activityLogs = sqliteTable(
+  "activity_logs",
+  {
+    id: id(),
+    userId: userId(),
+    localDate: text("local_date").notNull(),
+    kcal: integer("kcal").notNull(),
+    kind: text("kind", { enum: ACTIVITY_KINDS }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("activity_logs_user_date_idx").on(t.userId, t.localDate)],
 );
 
 export const chatMessages = sqliteTable(

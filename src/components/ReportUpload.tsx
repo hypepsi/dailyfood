@@ -46,6 +46,8 @@ export function ReportUpload() {
 
   async function undo() {
     if (!result) return;
+    // 覆盖了当天原有记录时，删除后原来的那条也回不来，先说清楚
+    if (result.replaced && !window.confirm("这份报告已经覆盖了当天原来的记录。删除后这一天将没有数据，确定删除吗？")) return;
     await request("DELETE", `/api/metrics/${result.id}`).catch(() => null);
     setResult(null);
     router.refresh();
@@ -107,7 +109,7 @@ export function ReportUpload() {
             ))}
           </dl>
           <button className="mt-3 text-[13px] text-faint underline" onClick={undo}>
-            读得不对？撤销这次记录
+            {result.replaced ? "读得不对？删除这条记录" : "读得不对？撤销这次记录"}
           </button>
         </div>
       )}

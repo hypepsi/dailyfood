@@ -10,7 +10,8 @@ let client: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!env.openaiKey) throw new AppError(503, "ai_unconfigured", "AI 服务尚未配置");
-  client ??= new OpenAI({ apiKey: env.openaiKey, timeout: 60_000, maxRetries: 1 });
+  // 超时 45 秒、最多重试一次：最坏 90 秒，留在反向代理 100 秒的限制以内
+  client ??= new OpenAI({ apiKey: env.openaiKey, timeout: 45_000, maxRetries: 1 });
   return client;
 }
 

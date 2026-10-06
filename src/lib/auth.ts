@@ -64,6 +64,9 @@ export function loginBlocked(key: string): boolean {
 
 export function recordLoginFailure(key: string) {
   const now = Date.now();
+  if (failures.size > 5000) {
+    for (const [k, v] of failures) if (v.resetAt < now) failures.delete(k);
+  }
   const f = failures.get(key);
   if (!f || f.resetAt < now) failures.set(key, { count: 1, resetAt: now + WINDOW_MS });
   else f.count += 1;

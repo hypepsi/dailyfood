@@ -32,7 +32,8 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const over = day.kcalRemaining < 0;
   const proteinDone = day.proteinRemaining <= 0;
 
-  const week = getDailyTotals(user, addDays(date, -6), date);
+  // 今天还在吃，算进去会把平均值拉低；看今天时取之前的 7 天，看过去某天时取截至那天的 7 天
+  const week = isToday ? getDailyTotals(user, addDays(date, -7), addDays(date, -1)) : getDailyTotals(user, addDays(date, -6), date);
   const weekAvg = week.length ? Math.round(week.reduce((s, d) => s + d.kcal, 0) / week.length) : null;
 
   const weight = getWeightStats(user, today);
@@ -44,7 +45,9 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
   const fatMass = bodyFat?.weightKg ? (bodyFat.weightKg * bodyFat.pct) / 100 : null;
-  const toGoal = weight.avg7Kg !== null && goals.targetWeightKg !== null ? weight.avg7Kg - goals.targetWeightKg : null;
+  // 优先用 7 日平均；最近 7 天没称重时退回到最后一次的体重
+  const referenceKg = weight.avg7Kg ?? weight.latestKg;
+  const toGoal = referenceKg !== null && goals.targetWeightKg !== null ? referenceKg - goals.targetWeightKg : null;
 
   return (
     <div className="space-y-3 lg:space-y-4">

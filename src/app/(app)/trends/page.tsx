@@ -41,10 +41,12 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
 
   const goals = goalsForDate(user, today);
   const intake = getDailyTotals(user, from, today);
-  const avgKcal = mean(intake.map((d) => d.kcal));
-  const avgProtein = mean(intake.map((d) => d.proteinG));
-  const withinTarget = intake.filter((d) => d.kcal <= goals.calorieTarget).length;
-  const proteinHit = intake.filter((d) => d.proteinG >= goals.proteinTargetG).length;
+  // 图上画出今天，但平均值和达标天数不算今天：今天还没吃完，算进去会偏低
+  const complete = intake.filter((d) => d.date < today);
+  const avgKcal = mean(complete.map((d) => d.kcal));
+  const avgProtein = mean(complete.map((d) => d.proteinG));
+  const withinTarget = complete.filter((d) => d.kcal <= goals.calorieTarget).length;
+  const proteinHit = complete.filter((d) => d.proteinG >= goals.proteinTargetG).length;
 
   const bodyFat = inRange(allBodyFat);
   const waist = inRange(allWaist);
@@ -100,11 +102,11 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         </Card>
 
         <Card icon={Flame} title="热量">
-          {avgKcal === null ? (
+          {intake.length === 0 ? (
             <p className="py-2 text-muted">这段时间没有饮食记录</p>
           ) : (
             <>
-              <BigStat label="平均每日摄入" value={`${Math.round(avgKcal)}`} unit="kcal" />
+              <BigStat label="平均每日摄入" value={avgKcal === null ? "—" : `${Math.round(avgKcal)}`} unit="kcal" />
               <div className="mt-2">
                 <TrendChart
                   kind="bar"
@@ -116,19 +118,19 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
               </div>
               <StatRow
                 stats={[
-                  { label: "记录天数", value: `${intake.length}` },
+                  { label: "记录天数", value: `${complete.length}` },
                   { label: "未超目标", value: `${withinTarget} 天` },
-                  { label: "日均差值", value: `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
+                  { label: "日均差值", value: avgKcal === null ? "—" : `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
                 ]}
               />
-              <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子</p>
+              <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子，不含今天</p>
             </>
           )}
         </Card>
 
-        {avgProtein !== null && (
+        {intake.length > 0 && (
           <Card icon={Egg} title="蛋白质">
-            <BigStat label="平均每日摄入" value={`${Math.round(avgProtein)}`} unit="g" />
+            <BigStat label="平均每日摄入" value={avgProtein === null ? "—" : `${Math.round(avgProtein)}`} unit="g" />
             <div className="mt-2">
               <TrendChart
                 kind="bar"
@@ -140,7 +142,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             </div>
             <StatRow
               stats={[
-                { label: "达标天数", value: `${proteinHit} / ${intake.length}` },
+                { label: "达标天数", value: `${proteinHit} / ${complete.length}` },
                 { label: "目标", value: `${goals.proteinTargetG} g` },
               ]}
             />

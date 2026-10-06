@@ -1,4 +1,4 @@
-import { and, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq, lte } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { ACTIVITY_LEVELS, type User } from "@/db/schema";
@@ -31,6 +31,9 @@ export const profileInput = z.object({
 });
 export type ProfileInput = z.infer<typeof profileInput>;
 
+/** 目标历史里表示“从一开始”的日期 */
+const EPOCH_DATE = "0000-01-01";
+
 export type Goals = { calorieTarget: number; proteinTargetG: number; targetWeightKg: number | null };
 
 export function updateProfile(user: User, input: ProfileInput) {
@@ -44,6 +47,20 @@ export function updateProfile(user: User, input: ProfileInput) {
     tx.update(users).set({ ...input, updatedAt: now }).where(eq(users.id, user.id)).run();
     if (goalsChanged) {
       const effectiveDate = localDate(now, input.timezone);
+      // 第一次改目标时，先把旧目标存成“从一开始就生效”的一条，否则过去的日子会被新目标重新评价
+      const hasHistory = tx.select({ id: goalHistory.id }).from(goalHistory).where(eq(goalHistory.userId, user.id)).limit(1).get();
+      if (!hasHistory) {
+        tx.insert(goalHistory)
+          .values({
+            userId: user.id,
+            effectiveDate: EPOCH_DATE,
+            calorieTarget: user.calorieTarget,
+            proteinTargetG: user.proteinTargetG,
+            targetWeightKg: user.targetWeightKg,
+            createdAt: now,
+          })
+          .run();
+      }
       // 同一天多次修改只保留最后一次
       tx.delete(goalHistory)
         .where(and(eq(goalHistory.userId, user.id), eq(goalHistory.effectiveDate, effectiveDate)))
@@ -71,7 +88,11 @@ export function goalsForDate(user: User, date: string): Goals {
     .orderBy(desc(goalHistory.effectiveDate))
     .limit(1)
     .get();
-  const source = row ?? user;
+  // 早于第一条历史的日子，用最早的那条；完全没有历史（从没改过目标）才用当前目标
+  const earliest = row
+    ? null
+    : getDb().select().from(goalHistory).where(eq(goalHistory.userId, user.id)).orderBy(asc(goalHistory.effectiveDate)).limit(1).get();
+  const source = row ?? earliest ?? user;
   return {
     calorieTarget: source.calorieTarget,
     proteinTargetG: source.proteinTargetG,

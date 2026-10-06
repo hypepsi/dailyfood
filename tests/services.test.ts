@@ -5,7 +5,7 @@ import { AppError } from "@/lib/errors";
 import { createDraft, createManualMeal, deleteMeal, getDailyTotals, getMeal, saveMeal, type MealInput } from "@/services/meals";
 import { addMetric, getDailySeries } from "@/services/metrics";
 import { goalsForDate, updateProfile } from "@/services/profile";
-import { buildSnapshot, getDaySummary, renderSnapshot } from "@/services/snapshot";
+import { buildSnapshot, getDaySummary, getWeightStats, renderSnapshot } from "@/services/snapshot";
 
 let db: Db;
 let user: User;
@@ -105,6 +105,26 @@ describe("目标与身体数据", () => {
     updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
     expect(goalsForDate(user, "2026-09-15").calorieTarget).toBe(2000);
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1800);
+  });
+
+  it("第一次改目标时保留旧目标：过去的日子不会被新目标重新评价", () => {
+    // 从没改过目标的用户（没有任何历史）
+    expect(goalsForDate(user, "2026-01-01").calorieTarget).toBe(2000);
+    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", calorieTarget: 1700, proteinTargetG: 150, targetWeightKg: 80 });
+    expect(goalsForDate(user, "2026-01-01")).toEqual({ calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85 });
+    expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1700);
+  });
+
+  it("不能把饮食记到未来", () => {
+    expect(() => createManualMeal(user, { ...meal(500), date: "2099-01-01" })).toThrow(AppError);
+    const id = createManualMeal(user, meal(500));
+    expect(() => saveMeal(user, id, { ...meal(500), date: "2099-01-01" })).toThrow(AppError);
+  });
+
+  it("很久没称重时仍然能拿到最后一次的体重", () => {
+    addMetric(user, { date: "2026-01-10", weightKg: 91, bodyFatPct: null, waistCm: null, muscleKg: null, skeletalMuscleKg: null, visceralFat: null, bmrKcal: null, note: null });
+    const stats = getWeightStats(user, "2026-10-06");
+    expect(stats).toMatchObject({ latestKg: 91, latestDate: "2026-01-10", avg7Kg: null, trend30PerWeek: null });
   });
 
   it("同一天多次称重取最后一次；至少要填一项", () => {

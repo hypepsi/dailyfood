@@ -83,6 +83,20 @@ describe("热量差汇总", () => {
     expect(s.streak).toBe(3);
   });
 
+  it("今天还没吃完时，今天不算进累计；没有记录的日子不算热量差", () => {
+    eat("2026-10-05", 2000);
+    eat(TODAY, 600); // 16:00，只记了午餐
+    const s = getDeficitSummary(user, TODAY, NOW)!;
+    expect(s.settled).toBe(false);
+    expect(s.week).toEqual({ days: 1, total: 460 });
+    expect(s.allTime).toEqual({ days: 1, total: 460 });
+
+    const empty = getDeficitSummary(user, "2026-10-03", NOW)!;
+    expect(empty.hasRecords).toBe(false);
+    expect(empty.week.days).toBe(0);
+    expect(getDeficitSummary(user, "2026-10-05", NOW)!.hasRecords).toBe(true);
+  });
+
   it("资料不全时不计算", () => {
     const other = db.insert(schema.users).values({ username: "o", passwordHash: "x", displayName: "o", calorieTarget: 2000, proteinTargetG: 100, createdAt: 0, updatedAt: 0 }).returning().get();
     expect(getDeficitSummary(other, TODAY, NOW)).toBeNull();

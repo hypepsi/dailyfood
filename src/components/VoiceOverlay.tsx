@@ -31,6 +31,11 @@ export function VoiceOverlay({ title, onRecorded, onClose }: Props) {
   const [attempt, setAttempt] = useState(0);
   const recorder = useRef<MediaRecorder | null>(null);
   const cancelled = useRef(false);
+  // 父组件每次渲染都可能传来新的回调函数；放进 ref，避免它一变就把正在进行的录音重启
+  const onRecordedRef = useRef(onRecorded);
+  useEffect(() => {
+    onRecordedRef.current = onRecorded;
+  }, [onRecorded]);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -43,7 +48,7 @@ export function VoiceOverlay({ title, onRecorded, onClose }: Props) {
     async function upload(blob: Blob) {
       setPhase("processing");
       try {
-        await onRecorded(blob);
+        await onRecordedRef.current(blob);
       } catch (err) {
         setError((err as Error).message);
         setPhase("error");
@@ -97,7 +102,7 @@ export function VoiceOverlay({ title, onRecorded, onClose }: Props) {
       stream?.getTracks().forEach((t) => t.stop());
     };
     // attempt 变化时重新录一次
-  }, [attempt, onRecorded]);
+  }, [attempt]);
 
   const finish = () => recorder.current?.state === "recording" && recorder.current.stop();
 

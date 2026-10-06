@@ -57,7 +57,9 @@ const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 export function recommendGoals(f: BodyFacts): GoalRecommendation | null {
   const energy = estimateEnergy(f);
   if (!energy || !f.weightKg) return null;
-  const calorieTarget = roundTo(Math.max(energy.tdee - DAILY_DEFICIT, energy.bmr, MIN_CALORIES), 50);
+  const floor = Math.max(energy.bmr, MIN_CALORIES);
+  // 取整到 50；受下限约束时向上取整，保证不低于基础代谢
+  const calorieTarget = Math.max(roundTo(energy.tdee - DAILY_DEFICIT, 50), Math.ceil(floor / 50) * 50);
 
   let protein: number;
   let proteinBasis: string;

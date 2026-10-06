@@ -19,7 +19,9 @@ const BACKUPS_TO_KEEP = 14;
 async function backupDatabase() {
   const dir = path.join(env.dataDir, "backups");
   fs.mkdirSync(dir, { recursive: true });
-  const stamp = new Date().toISOString().slice(0, 10);
+  // 文件名用服务器本地日期（toISOString 是 UTC，凌晨跑的任务会被标成前一天）
+  const now = new Date();
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const target = path.join(dir, `loseweight-${stamp}.db`);
   const source = new Database(path.join(env.dataDir, "loseweight.db"), { readonly: true });
   await source.backup(target);

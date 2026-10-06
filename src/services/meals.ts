@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { MEAL_TYPES, type Meal, type MealItem, type MealType, type User } from "@/db/schema";
-import { AppError, notFound } from "@/lib/errors";
+import { AppError, badRequest, notFound } from "@/lib/errors";
 import { removeImages } from "@/lib/images";
 import { guessMealType, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { isDateString, isTimeString, localDate, localParts, zonedToUtc } from "@/lib/time";
@@ -86,7 +86,8 @@ export function createDraft(
   const db = getDb();
   const now = Date.now();
   const local = localParts(now, user.timezone);
-  const backdated = draft.date && draft.date !== local.date ? draft.date : null;
+  // 只接受过去的日期；今天或未来一律按“现在”记
+  const backdated = draft.date && draft.date < local.date ? draft.date : null;
   const eatenAt = backdated ? zonedToUtc(backdated, "12:00", user.timezone) : now;
   return db.transaction((tx) => {
     const meal = tx
@@ -132,8 +133,14 @@ export function replaceDraftEstimate(
   });
 }
 
+/** 界面上已经限制了日期，这里是服务端的最后一道检查 */
+function assertNotFuture(user: User, date: string) {
+  if (date > localDate(Date.now(), user.timezone)) throw badRequest("不能记录未来的日期");
+}
+
 /** 纯手动记录，直接确认 */
 export function createManualMeal(user: User, input: MealInput): number {
+  assertNotFuture(user, input.date);
   const db = getDb();
   const now = Date.now();
   return db.transaction((tx) => {
@@ -161,6 +168,7 @@ export function createManualMeal(user: User, input: MealInput): number {
 
 /** 确认草稿，或修改已确认的记录。保存的永远是用户最终值 */
 export function saveMeal(user: User, mealId: number, input: MealInput) {
+  assertNotFuture(user, input.date);
   const db = getDb();
   const meal = getMealRow(user, mealId);
   const now = Date.now();

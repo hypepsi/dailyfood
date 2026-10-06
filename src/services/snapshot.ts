@@ -43,7 +43,8 @@ export function getDaySummary(user: User, date: string): DaySummary {
 
 export function getWeightStats(user: User, date: string): WeightStats {
   const series = getDailySeries(user, "weightKg", addDays(date, -44), date);
-  const latest = series.at(-1) ?? null;
+  // 趋势只看最近 45 天；“最新体重”不受这个窗口限制，很久没称也要能显示上一次的
+  const latest = series.at(-1) ?? getDailySeries(user, "weightKg", undefined, date).at(-1) ?? null;
   return {
     latestKg: latest?.value ?? null,
     latestDate: latest?.date ?? null,
@@ -70,6 +71,9 @@ export function getEnergy(user: User, date: string, weight = getWeightStats(user
   return { facts, energy: estimateEnergy(facts), bodyFat };
 }
 
+/** 没记晚餐时，到几点就认为今天吃完了。定得晚一些：晚饭吃得晚、记得晚都很常见 */
+const SETTLED_HOUR = 22;
+
 export type DeficitDay = DayBurn & { date: string; intake: number; deficit: number };
 
 /**
@@ -93,15 +97,20 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
   const day = dayOf(date);
   const isToday = date === local.date;
   const dinnerLogged = isToday && getConfirmedMeals(user, date).some((m) => m.mealType === "dinner");
-  const logged = [...intakeByDate.keys()].filter((d) => d <= date).map(dayOf);
+  const settled = !isToday || local.hour >= SETTLED_HOUR || dinnerLogged;
+  // 今天还没吃完时，今天的“热量差”只是进行中的数字，不能算进累计
+  const lastCounted = settled ? date : addDays(date, -1);
+  const logged = [...intakeByDate.keys()].filter((d) => d <= lastCounted).map(dayOf);
   const weekStart = addDays(date, -6);
   const week = logged.filter((d) => d.date >= weekStart);
   const sum = (days: DeficitDay[]) => days.reduce((s, d) => s + d.deficit, 0);
 
   return {
     day,
-    /** 这一天算不算“吃完了”：过去的日子、今天 20 点以后、或已经记了晚餐 */
-    settled: !isToday || local.hour >= 20 || dinnerLogged,
+    /** 这一天有没有饮食记录；没有记录就不知道吃了多少，不能把全部消耗当成热量差 */
+    hasRecords: intakeByDate.has(date),
+    /** 这一天算不算“吃完了”：过去的日子、今天 22 点以后、或已经记了晚餐 */
+    settled,
     /** 如果今天正好吃到目标，热量差会是多少 */
     deficitAtTarget: day.burn - goals.calorieTarget,
     week: { days: week.length, total: sum(week) },
@@ -177,9 +186,15 @@ export function renderSnapshot(s: Snapshot): string {
         : `今天的消耗：约 ${d.day.burn} kcal（今天没有录入手表数据，按活动水平估算）`,
     );
     lines.push(
-      `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`,
+      d.hasRecords
+        ? `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`
+        : `今天还没有饮食记录，暂不计算热量差；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`,
     );
-    if (d.week.days > 0) lines.push(`近 7 天有记录的 ${d.week.days} 天累计热量差：${d.week.total} kcal，折合脂肪约 ${fatGrams(d.week.total)} g`);
+    if (d.week.days > 0) {
+      lines.push(
+        `近 7 天有记录的 ${d.week.days} 天累计热量差：${d.week.total} kcal，折合脂肪约 ${fatGrams(d.week.total)} g${d.settled ? "" : "（不含还没吃完的今天）"}`,
+      );
+    }
     lines.push(`连续记录天数：${d.streak}`);
   }
 
@@ -214,9 +229,10 @@ export function renderSnapshot(s: Snapshot): string {
   }
 
   lines.push("", "【体重】");
-  if (weight.latestKg === null) lines.push("最近 45 天没有体重记录。");
+  if (weight.latestKg === null) lines.push("还没有体重记录。");
   else {
     lines.push(`最新：${weight.latestKg} kg（${weight.latestDate}）`);
+    if (weight.avg7Kg === null) lines.push("最近 7 天没有称重，上面是最后一次的记录，可能已经过时。");
     lines.push(`近 7 日平均：${fmt(weight.avg7Kg, " kg")}；再往前 7 日平均：${fmt(weight.prevAvg7Kg, " kg")}`);
     lines.push(
       weight.trend30PerWeek === null

@@ -14,7 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-45%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-49%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -182,7 +182,7 @@ AI 每次返回的内容：每样食物的名称、数量、重量、热量、�
 | 大于 1000 | 缺口偏大 | **不作为成就鼓励** |
 
 - 折合脂肪按 7700 kcal ≈ 1 kg
-- 今天 20 点前且还没记晚餐时，只显示进行中的数字和「吃满目标后」的预估，不评档位
+- 今天 22 点前且还没记晚餐时，只显示进行中的数字和「吃满目标后」的预估，不评档位
 - 累计只统计有饮食记录的日子
 
 </details>
@@ -364,7 +364,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        8 个测试文件，45 个用例
+tests/        8 个测试文件，49 个用例
 docs/         README 用的截图
 ```
 
@@ -385,7 +385,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 45 个测试
+npm test             # 49 个测试
 npm run typecheck    # 类型检查
 ```
 

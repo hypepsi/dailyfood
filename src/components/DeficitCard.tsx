@@ -29,34 +29,40 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
     );
   }
 
-  const { day, settled, deficitAtTarget, week, allTime, streak } = summary;
+  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak } = summary;
   const tier = deficitTier(day.deficit);
   const surplus = day.deficit < 0;
   const bad = tier.key === "surplus" || tier.key === "too_much";
   const step = LADDER.findIndex((l) => l.key === tier.key);
 
+  const atTarget =
+    deficitAtTarget > 0 ? (
+      <>
+        吃满{isToday ? "今天的" : ""}目标后，热量差约 <b className="text-ink">{deficitAtTarget.toLocaleString("en-US")} kcal</b>，≈ {fatText(deficitAtTarget)} 脂肪
+      </>
+    ) : (
+      <>按目标吃的话，会比消耗多 {Math.abs(deficitAtTarget).toLocaleString("en-US")} kcal</>
+    );
+
   return (
     <Card icon={Trophy} title="热量差">
-      <BigStat
-        label={!settled ? "目前的热量差（今天还没吃完）" : surplus ? (isToday ? "今天多吃了" : "当天多吃了") : isToday ? "今天的热量差" : "当天的热量差"}
-        value={Math.abs(day.deficit).toLocaleString("en-US")}
-        unit="kcal"
-        tone={settled && surplus ? "warn" : "accent"}
-        sub={
-          settled ? (
-            surplus ? null : (
-              <span className="font-semibold text-accent">≈ 少了 {fatText(day.deficit)} 脂肪</span>
-            )
-          ) : (
-            <>
-              吃满今天的目标后，热量差约 <b className="text-ink">{deficitAtTarget.toLocaleString("en-US")} kcal</b>
-              {deficitAtTarget > 0 && <>，≈ {fatText(deficitAtTarget)} 脂肪</>}
-            </>
-          )
-        }
-      />
+      {!hasRecords ? (
+        // 没有饮食记录就不知道吃了多少，不能把全部消耗都算成热量差
+        <p className="text-muted">
+          {isToday ? "今天还没有饮食记录，记了第一顿就开始计算。" : "这一天没有饮食记录，无法计算热量差。"}
+          {isToday && <span className="mt-1 block text-[13px]">{atTarget}</span>}
+        </p>
+      ) : (
+        <BigStat
+          label={surplus ? (isToday ? (settled ? "今天多吃了" : "目前已经多吃了") : "当天多吃了") : !settled ? "目前的热量差（今天还没吃完）" : isToday ? "今天的热量差" : "当天的热量差"}
+          value={Math.abs(day.deficit).toLocaleString("en-US")}
+          unit="kcal"
+          tone={surplus ? "warn" : "accent"}
+          sub={surplus ? null : settled ? <span className="font-semibold text-accent">≈ 少了 {fatText(day.deficit)} 脂肪</span> : atTarget}
+        />
+      )}
 
-      {settled && (
+      {hasRecords && settled && (
         <div className="mt-3">
           <div className="flex items-center gap-2">
             <span className={`rounded-full px-3 py-1 text-sm font-bold ${bad ? "bg-warn-tint text-warn" : "bg-tint text-accent-deep"}`}>{tier.label}</span>

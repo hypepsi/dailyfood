@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { User } from "@/db/schema";
+import { MEAL_TYPES, type MealType, type User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
 import { round1 } from "@/lib/nutrition";
@@ -13,7 +13,7 @@ const CONFIDENCE = ["high", "medium", "low"] as const;
 const JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["is_food", "title", "items", "kcal_low", "kcal_high", "people_hint", "questions", "note"],
+  required: ["is_food", "title", "items", "kcal_low", "kcal_high", "people_hint", "people_stated", "meal_type_stated", "questions", "note"],
   properties: {
     is_food: { type: "boolean", description: "内容里是否有可以估算的食物或饮料" },
     title: { type: "string", description: "这顿饭的简短名称，不超过 12 个字" },
@@ -39,6 +39,8 @@ const JSON_SCHEMA = {
     kcal_low: { type: "number", description: "整顿饭总热量合理范围下限" },
     kcal_high: { type: "number", description: "整顿饭总热量合理范围上限" },
     people_hint: { type: "integer", description: "这些食物大约是几个人的量；一人份填 1" },
+    people_stated: { type: ["integer", "null"], description: "用户明确说出的一起吃饭总人数（含本人）；没说为 null" },
+    meal_type_stated: { type: ["string", "null"], enum: ["breakfast", "lunch", "dinner", "snack", null], description: "用户明确说出的餐次；没说为 null" },
     questions: {
       type: "array",
       description: "最多 2 个；没有显著影响就留空",
@@ -75,6 +77,8 @@ const modelOutput = z.object({
   kcal_low: z.number(),
   kcal_high: z.number(),
   people_hint: z.number(),
+  people_stated: z.number().nullable(),
+  meal_type_stated: z.enum(MEAL_TYPES).nullable(),
   questions: z.array(z.object({ question: z.string(), options: z.array(z.string()) })),
   note: z.string(),
 });
@@ -87,6 +91,9 @@ export type MealEstimate = {
   kcalHigh: number;
   /** AI 觉得这像几个人的量；只用于界面提示，不自动分摊 */
   peopleHint: number;
+  /** 用户在描述里明确说出的人数和餐次，用作确认页的默认值 */
+  peopleStated: number | null;
+  mealTypeStated: MealType | null;
   questions: { question: string; options: string[] }[];
   note: string;
 };
@@ -139,6 +146,8 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
     kcalLow,
     kcalHigh,
     peopleHint: Math.min(Math.max(Math.round(parsed.people_hint), 1), 12),
+    peopleStated: parsed.people_stated === null ? null : Math.min(Math.max(Math.round(parsed.people_stated), 1), 20),
+    mealTypeStated: parsed.meal_type_stated,
     questions: parsed.questions
       .filter((q) => q.question.trim() && q.options.length >= 2)
       .slice(0, 2)

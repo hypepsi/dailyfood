@@ -14,7 +14,7 @@ const item = (name: string, kcal: number) => ({
   confidence: "medium",
 });
 
-const base = { is_food: true, title: "早餐", kcal_low: 280, kcal_high: 360, people_hint: 1, questions: [], note: "" };
+const base = { is_food: true, title: "早餐", kcal_low: 280, kcal_high: 360, people_hint: 1, people_stated: null, meal_type_stated: null, questions: [], note: "" };
 
 describe("AI 识别结果校验", () => {
   it("总热量由程序相加，不采用模型的总数", () => {

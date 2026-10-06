@@ -7,12 +7,13 @@ import { requireUser } from "@/lib/session";
 import { localParts } from "@/lib/time";
 import { getMeal, todayFor, type MealWithItems } from "@/services/meals";
 
-function readEstimate(meal: MealWithItems): MealEstimate | null {
-  if (!meal.aiEstimate) return null;
+function readAiRecord(meal: MealWithItems): { estimate: MealEstimate | null; text: string | null } {
+  if (!meal.aiEstimate) return { estimate: null, text: null };
   try {
-    return (JSON.parse(meal.aiEstimate) as { estimate?: MealEstimate }).estimate ?? null;
+    const record = JSON.parse(meal.aiEstimate) as { estimate?: MealEstimate; text?: string | null };
+    return { estimate: record.estimate ?? null, text: record.text ?? null };
   } catch {
-    return null;
+    return { estimate: null, text: null };
   }
 }
 
@@ -30,7 +31,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
   }
 
   const today = todayFor(user);
-  const estimate = readEstimate(meal);
+  const { estimate, text: described } = readAiRecord(meal);
   const isDraft = meal.status === "draft";
   const items: EditorItem[] = meal.items.map((item, i) => ({
     name: item.name,
@@ -51,6 +52,12 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
       {meal.thumbPath && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={`/api/meals/${meal.id}/image`} alt="食物照片" className="mb-3 max-h-48 w-full rounded-3xl object-cover" />
+      )}
+      {described && (
+        <p className="mb-3 rounded-2xl border border-line bg-card px-4 py-3 text-sm leading-relaxed text-muted">
+          <span className="text-faint">{meal.source === "voice" ? "听到的是：" : "你的描述："}</span>
+          {described}
+        </p>
       )}
       <MealEditor
         key={meal.updatedAt}

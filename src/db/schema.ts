@@ -66,7 +66,7 @@ export const meals = sqliteTable(
     mealType: text("meal_type", { enum: MEAL_TYPES }).notNull(),
     /** draft 不计入任何统计；用户确认后变为 confirmed */
     status: text("status", { enum: ["draft", "confirmed"] }).notNull(),
-    source: text("source", { enum: ["photo", "text", "manual"] }).notNull(),
+    source: text("source", { enum: ["photo", "text", "voice", "manual"] }).notNull(),
     title: text("title").notNull().default(""),
     /** 几个人一起吃。明细按整桌保存，计入统计时除以人数 */
     sharePeople: integer("share_people").notNull().default(1),

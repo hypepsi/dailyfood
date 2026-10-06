@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { User } from "@/db/schema";
@@ -85,3 +85,43 @@ export async function callModel(options: CallOptions): Promise<string> {
 }
 
 export const currentModel = () => env.openaiModel;
+
+const AUDIO_EXTENSIONS: Record<string, string> = {
+  "audio/webm": "webm",
+  "video/webm": "webm",
+  "audio/mp4": "mp4",
+  "audio/m4a": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/mpeg": "mp3",
+  "audio/ogg": "ogg",
+  "audio/wav": "wav",
+};
+
+export const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+
+/** 语音转文字。只接受常见的录音格式；hint 用来提示模型这段话的大致内容 */
+export async function transcribeAudio(user: User, audio: { data: Buffer; mimeType: string }, hint: string): Promise<string> {
+  const extension = AUDIO_EXTENSIONS[audio.mimeType.split(";")[0].trim().toLowerCase()];
+  if (!extension) throw new AppError(400, "bad_audio", "不支持这种录音格式");
+  if (audio.data.length === 0) throw new AppError(400, "bad_audio", "没有录到声音");
+  if (audio.data.length > MAX_AUDIO_BYTES) throw new AppError(413, "audio_too_large", "录音太长了，请说短一点");
+  assertWithinDailyLimit(user);
+
+  const model = env.transcribeModel;
+  const started = Date.now();
+  try {
+    const result = await getClient().audio.transcriptions.create({
+      model,
+      file: await toFile(audio.data, `speech.${extension}`, { type: audio.mimeType }),
+      language: "zh",
+      prompt: hint,
+    });
+    const durationMs = Date.now() - started;
+    getDb().insert(schema.aiUsage).values({ userId: user.id, kind: "transcribe", model, durationMs, createdAt: Date.now() }).run();
+    log.info("ai call", { kind: "transcribe", model, ms: durationMs });
+    return result.text.trim();
+  } catch (err) {
+    log.error("transcription failed", err, { model, ms: Date.now() - started });
+    throw new AppError(502, "ai_failed", "语音识别暂时不可用，请稍后重试或改用文字");
+  }
+}

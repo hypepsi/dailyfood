@@ -107,7 +107,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
 
       {isToday && day.meals.length > 0 && <AdviceCard refreshKey={day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")} />}
       <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
-        <MealList meals={day.meals} date={date} timezone={user.timezone} />
+        <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
       </Card>
 
       <Card icon={Scale} title="体重" action={{ href: "/weight", label: "历史", icon: History }}>

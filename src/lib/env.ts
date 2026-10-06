@@ -16,6 +16,9 @@ export const env = {
   get openaiModel() {
     return process.env.OPENAI_MODEL || "gpt-6-astra";
   },
+  get transcribeModel() {
+    return process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-transcribe";
+  },
   get appOrigin() {
     return (process.env.APP_ORIGIN || "").replace(/\/$/, "");
   },

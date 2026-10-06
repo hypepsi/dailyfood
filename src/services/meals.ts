@@ -65,7 +65,10 @@ function titleFor(input: { title: string; items: ItemInput[] }): string {
 export function createDraft(
   user: User,
   draft: {
-    source: "photo" | "text";
+    source: "photo" | "text" | "voice";
+    /** 用户在描述里明确说出的人数和餐次，优先于默认值 */
+    people?: number | null;
+    mealType?: MealType | null;
     title: string;
     items: ItemInput[];
     aiEstimate: unknown;
@@ -88,7 +91,8 @@ export function createDraft(
         userId: user.id,
         localDate: backdated ?? local.date,
         eatenAt,
-        mealType: backdated ? "lunch" : guessMealType(local.hour, local.minute),
+        mealType: draft.mealType ?? (backdated ? "lunch" : guessMealType(local.hour, local.minute)),
+        sharePeople: draft.people ?? 1,
         status: "draft",
         source: draft.source,
         title: draft.title.slice(0, 60),

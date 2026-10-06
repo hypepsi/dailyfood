@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { MEAL_TYPES } from "@/db/schema";
 import { MEAL_LABELS } from "@/lib/nutrition";
+import { MealVoiceButton } from "./MealVoiceButton";
 import type { MealWithItems } from "@/services/meals";
 
 /** 早餐 / 午餐 / 晚餐 / 加餐 四栏，每栏列出已记录的饮食 */
-export function MealList({ meals, date, timezone }: { meals: MealWithItems[]; date: string; timezone: string }) {
+export function MealList({ meals, date, isToday, timezone }: { meals: MealWithItems[]; date: string; isToday: boolean; timezone: string }) {
   const timeFmt = new Intl.DateTimeFormat("zh-CN", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   return (
     <div className="divide-y divide-line">
@@ -21,10 +22,11 @@ export function MealList({ meals, date, timezone }: { meals: MealWithItems[]; da
               ) : (
                 <span className="text-sm text-faint">未记录</span>
               )}
+              <MealVoiceButton mealType={type} date={isToday ? undefined : date} />
               <Link
                 href={`/meal/new?date=${date}&type=${type}`}
                 aria-label={`添加${MEAL_LABELS[type]}`}
-                className="-mr-2 ml-1 flex h-8 w-8 items-center justify-center rounded-full text-faint active:bg-line"
+                className="-mr-2 flex h-8 w-8 items-center justify-center rounded-full text-faint active:bg-line"
               >
                 <Plus size={16} />
               </Link>

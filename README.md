@@ -53,6 +53,7 @@ npm run typecheck   # 类型检查
 |---|---|
 | `OPENAI_API_KEY` | OpenAI 密钥，只在服务端使用 |
 | `OPENAI_MODEL` | 识图和聊天使用的模型，默认 `gpt-6-astra` |
+| `OPENAI_TRANSCRIBE_MODEL` | 语音转文字模型，默认 `gpt-4o-transcribe` |
 | `DATA_DIR` | 数据目录（数据库、图片、备份），生产为 `/var/lib/loseweight` |
 | `APP_ORIGIN` | 对外地址，如 `https://lw.example.com`，用于校验请求来源 |
 | `IMAGE_RETENTION_DAYS` | 原图保留天数，默认 90，之后只留缩略图 |
@@ -90,6 +91,9 @@ sudo deploy/deploy.sh                  # 安装依赖、测试、构建、重启
 4. 程序校验模型输出：数值范围、总热量由程序相加、范围必须包住总数、三大营养素与热量自相矛盾的项目降为“不太确定”。
 5. 存为草稿（`status=draft`，不计入统计），跳到确认页。
 6. 用户可回答追问（重新估算一次）、改任何数值、选择几人分食，点「确认记录」后才计入当天。
+
+语音记录走同一条路：浏览器录音（最长 60 秒）→ 服务端转文字（`OPENAI_TRANSCRIBE_MODEL`）→ 当作文字描述交给同一个识别流程。
+录音本身不保存，转出的文字随 AI 原始估算存档并显示在确认页。用户说出的人数和餐次会作为确认页的默认值。
 
 多人分食：明细按整桌保存，`meals.share_people` 记人数；合吃的项目计入 1/N，
 `meal_items.personal=1` 的项目（如自己那碗饭）全额计入。分摊只由程序计算。

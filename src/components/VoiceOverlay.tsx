@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Mic } from "lucide-react";
-import type { MealType } from "@/db/schema";
-import { request } from "@/lib/client-api";
-import { MEAL_LABELS } from "@/lib/nutrition";
 
 const MAX_SECONDS = 60;
 
@@ -16,12 +12,20 @@ function pickMimeType(): string | undefined {
   return ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t));
 }
 
+type Props = {
+  /** 录音时显示的标题和示例 */
+  title: string;
+  example: string;
+  /** 录完后怎么处理这段录音；抛出的错误会显示给用户并允许重录。成功后由调用方负责关闭 */
+  onRecorded: (audio: Blob) => Promise<void>;
+  onClose: () => void;
+};
+
 /**
- * 语音记录：打开即开始录音，点「说完了」后上传 → 转文字 → AI 估算 → 跳到确认页。
+ * 通用的录音浮层：打开即开始录音，点「说完了」后把录音交给 onRecorded。
  * 最长录 60 秒，到时自动结束。
  */
-export function VoiceOverlay({ date, mealType, onClose }: { date?: string; mealType?: MealType; onClose: () => void }) {
-  const router = useRouter();
+export function VoiceOverlay({ title, example, onRecorded, onClose }: Props) {
   const [phase, setPhase] = useState<Phase>("starting");
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState("");
@@ -40,13 +44,7 @@ export function VoiceOverlay({ date, mealType, onClose }: { date?: string; mealT
     async function upload(blob: Blob) {
       setPhase("processing");
       try {
-        const form = new FormData();
-        form.append("audio", blob, "speech");
-        if (date) form.append("date", date);
-        if (mealType) form.append("mealType", mealType);
-        const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form);
-        router.push(`/meal/${id}`);
-        onClose();
+        await onRecorded(blob);
       } catch (err) {
         setError((err as Error).message);
         setPhase("error");
@@ -100,7 +98,7 @@ export function VoiceOverlay({ date, mealType, onClose }: { date?: string; mealT
       stream?.getTracks().forEach((t) => t.stop());
     };
     // attempt 变化时重新录一次
-  }, [attempt, date, mealType, onClose, router]);
+  }, [attempt, onRecorded]);
 
   const finish = () => recorder.current?.state === "recording" && recorder.current.stop();
 
@@ -112,8 +110,8 @@ export function VoiceOverlay({ date, mealType, onClose }: { date?: string; mealT
             <Mic size={40} />
           </span>
           <div>
-            <p className="text-xl font-semibold">{phase === "recording" ? `正在听，说说${mealType ? MEAL_LABELS[mealType] : ""}吃了什么` : "正在打开麦克风…"}</p>
-            <p className="mt-2 text-sm text-white/70">例如：中午和丹丹吃了一盘西红柿炒鸡蛋，一小碗糙米饭</p>
+            <p className="text-xl font-semibold">{phase === "recording" ? title : "正在打开麦克风…"}</p>
+            <p className="mt-2 text-sm text-white/70">例如：{example}</p>
             {phase === "recording" && <p className="num mt-3 text-white/70">{seconds} 秒</p>}
           </div>
           <div className="flex gap-3">

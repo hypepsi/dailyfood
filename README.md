@@ -98,6 +98,10 @@ sudo deploy/deploy.sh                  # 安装依赖、测试、构建、重启
 多人分食：明细按整桌保存，`meals.share_people` 记人数；合吃的项目计入 1/N，
 `meal_items.personal=1` 的项目（如自己那碗饭）全额计入。分摊只由程序计算。
 
+修正（没吃完）：`meal_items.eaten_fraction` 记录每样食物实际吃掉的比例，明细保留原始份量，
+计入统计时 × 比例。快捷按钮由程序直接换算；语音或文字经 `/api/meals/[id]/adjust` 交给 AI
+翻译成每样食物的比例，只回填到编辑页，用户点「保存修改」才生效。
+
 ## 提示词
 
 所有提示词集中在 `src/lib/ai/prompts.ts`，文件开头写明了原则。修改识别提示词后要升 `MEAL_PROMPT_VERSION`，

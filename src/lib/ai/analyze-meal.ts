@@ -125,6 +125,7 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
       carbsG: round1(clamp(i.carbs_g, 1000)),
       fatG: round1(clamp(i.fat_g, 1000)),
       personal: i.personal,
+      eatenFraction: 1,
       confidence: i.confidence,
     }))
     .map((i) => (macrosMatchKcal(i) ? i : { ...i, confidence: "low" as const }));

@@ -64,6 +64,11 @@ html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
+  /* 像 App 一样只能上下滚动：禁止左右拖动、双指缩放和边缘回弹，
+     否则底部固定的导航会跟着被拖出屏幕 */
+  touch-action: pan-y;
+  overflow-x: clip;
+  overscroll-behavior: none;
 }
 
 @media (min-width: 1024px) {
@@ -77,7 +82,9 @@ body {
   font-family: var(--font-sans);
   /* 正文用中等字重：常规字重的中文在很多屏幕上显得发虚 */
   font-weight: 500;
-  overscroll-behavior-y: none;
+  touch-action: pan-y;
+  overflow-x: clip;
+  overscroll-behavior: none;
 }
 
 input,
@@ -86,6 +93,9 @@ select {
   /* 16px 以上，避免手机浏览器聚焦时自动放大页面 */
   font-size: 16px;
   font-weight: 500;
+  /* 有些手机上日期、时间输入框自带很宽的最小宽度，会把页面撑出屏幕 */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .num {

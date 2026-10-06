@@ -42,6 +42,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
     carbsG: item.carbsG,
     fatG: item.fatG,
     personal: item.personal,
+    eatenFraction: item.eatenFraction,
     // 置信度只在确认草稿时有意义，此时明细与 AI 结果一一对应
     confidence: isDraft ? estimate?.items[i]?.confidence : undefined,
   }));

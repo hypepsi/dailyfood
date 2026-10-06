@@ -20,6 +20,7 @@ export const itemInput = z.object({
   carbsG: grams.default(0),
   fatG: grams.default(0),
   personal: z.boolean().default(false),
+  eatenFraction: z.number().min(0).max(3).default(1),
 });
 export type ItemInput = z.infer<typeof itemInput>;
 
@@ -36,10 +37,13 @@ export type MealInput = z.infer<typeof mealInput>;
 
 export type MealWithItems = Meal & { items: MealItem[]; totals: Nutrients };
 
-/** 明细按整桌保存；多人分食时合吃的项目 ÷ 人数，自己单独吃的项目全算，由程序计算 */
+/**
+ * 明细保存的是原始份量。计入统计的量由程序计算：
+ * × 实际吃掉的比例（修正），合吃的项目再 ÷ 人数，自己单独吃的项目不分摊。
+ */
 function withTotals(meal: Meal, items: MealItem[]): MealWithItems {
   const mine = items.map((i) => {
-    const share = i.personal ? 1 : 1 / meal.sharePeople;
+    const share = i.eatenFraction * (i.personal ? 1 : 1 / meal.sharePeople);
     return { kcal: i.kcal * share, proteinG: i.proteinG * share, carbsG: i.carbsG * share, fatG: i.fatG * share };
   });
   return { ...meal, items, totals: sumNutrients(mine) };
@@ -243,10 +247,10 @@ export function getDailyTotals(user: User, from: string, to: string): DayTotals[
   const rows = getDb()
     .select({
       date: meals.localDate,
-      kcal: sql<number>`coalesce(sum(${mealItems.kcal} * 1.0 / ${divisor}), 0)`,
-      proteinG: sql<number>`coalesce(sum(${mealItems.proteinG} * 1.0 / ${divisor}), 0)`,
-      carbsG: sql<number>`coalesce(sum(${mealItems.carbsG} * 1.0 / ${divisor}), 0)`,
-      fatG: sql<number>`coalesce(sum(${mealItems.fatG} * 1.0 / ${divisor}), 0)`,
+      kcal: sql<number>`coalesce(sum(${mealItems.kcal} * ${mealItems.eatenFraction} / ${divisor}), 0)`,
+      proteinG: sql<number>`coalesce(sum(${mealItems.proteinG} * ${mealItems.eatenFraction} / ${divisor}), 0)`,
+      carbsG: sql<number>`coalesce(sum(${mealItems.carbsG} * ${mealItems.eatenFraction} / ${divisor}), 0)`,
+      fatG: sql<number>`coalesce(sum(${mealItems.fatG} * ${mealItems.eatenFraction} / ${divisor}), 0)`,
       mealCount: sql<number>`count(distinct ${meals.id})`,
     })
     .from(meals)

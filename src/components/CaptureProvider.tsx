@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { MealType } from "@/db/schema";
 import { request } from "@/lib/client-api";
 import { compressImage } from "@/lib/compress-image";
+import { MEAL_LABELS } from "@/lib/nutrition";
 import { VoiceOverlay } from "./VoiceOverlay";
 
 type Capture = {
@@ -37,6 +38,18 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [voice, setVoice] = useState<{ date?: string; mealType?: MealType } | null>(null);
   const closeVoice = useCallback(() => setVoice(null), []);
+  const analyzeVoice = useCallback(
+    async (audio: Blob) => {
+      const form = new FormData();
+      form.append("audio", audio, "speech");
+      if (voice?.date) form.append("date", voice.date);
+      if (voice?.mealType) form.append("mealType", voice.mealType);
+      const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form);
+      router.push(`/meal/${id}`);
+      setVoice(null);
+    },
+    [voice, router],
+  );
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
 
@@ -81,7 +94,12 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} data-capture="camera" />
       <input ref={albumInput} type="file" accept="image/*" hidden onChange={onChange} data-capture="album" />
 
-      {voice && <VoiceOverlay date={voice.date} mealType={voice.mealType} onClose={closeVoice} />}
+      {voice && <VoiceOverlay
+          title={`正在听，说说${voice.mealType ? MEAL_LABELS[voice.mealType] : ""}吃了什么`}
+          example="中午和丹丹吃了一盘西红柿炒鸡蛋，一小碗糙米饭"
+          onRecorded={analyzeVoice}
+          onClose={closeVoice}
+        />}
 
       {preview && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-white">

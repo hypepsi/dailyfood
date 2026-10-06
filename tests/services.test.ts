@@ -21,7 +21,7 @@ function makeUser(username: string): User {
 }
 
 const DATE = "2026-10-06";
-const egg = { name: "鸡蛋", quantity: "2 个", weightG: 100, kcal: 150, proteinG: 13, carbsG: 1, fatG: 10, personal: false };
+const egg = { name: "鸡蛋", quantity: "2 个", weightG: 100, kcal: 150, proteinG: 13, carbsG: 1, fatG: 10, personal: false, eatenFraction: 1 };
 const meal = (kcal: number, people = 1): MealInput => ({ mealType: "breakfast", date: DATE, time: "08:00", title: "", people, items: [{ ...egg, kcal }] });
 
 beforeEach(() => {
@@ -75,6 +75,20 @@ describe("饮食记录", () => {
     // 之后发现其实是两个人吃的
     saveMeal(user, id, meal(900, 2));
     expect(getDaySummary(user, DATE).kcalRemaining).toBe(1550);
+  });
+
+  it("修正：明细保留原始份量，统计按实际吃掉的比例计入", () => {
+    const rice = { ...egg, name: "米饭", kcal: 232 };
+    const id = createManualMeal(user, { ...meal(430), items: [{ ...egg, kcal: 430 }, rice] });
+    expect(getDaySummary(user, DATE).totals.kcal).toBe(662);
+    // 米饭只吃了一半
+    saveMeal(user, id, { ...meal(430), items: [{ ...egg, kcal: 430 }, { ...rice, eatenFraction: 0.5 }] });
+    expect(getMeal(user, id).items[1].kcal).toBe(232);
+    expect(getMeal(user, id).totals.kcal).toBe(546);
+    expect(getDailyTotals(user, DATE, DATE)[0].kcal).toBe(546);
+    // 两人分食且整体只吃了一半：430×0.5÷2 + 232×0.5÷2
+    saveMeal(user, id, { ...meal(430, 2), items: [{ ...egg, kcal: 430, eatenFraction: 0.5 }, { ...rice, eatenFraction: 0.5 }] });
+    expect(getDailyTotals(user, DATE, DATE)[0].kcal).toBe(166);
   });
 
   it("用户之间的数据互相不可见", () => {

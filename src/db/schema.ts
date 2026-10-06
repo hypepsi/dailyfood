@@ -100,6 +100,8 @@ export const mealItems = sqliteTable(
     fatG: real("fat_g").notNull().default(0),
     /** 多人分食时，这一项是否只有用户自己吃（如自己的一碗饭），是则不按人数分摊 */
     personal: integer("personal", { mode: "boolean" }).notNull().default(false),
+    /** 实际吃掉的比例：1=全吃了，0.5=吃了一半。明细保留原始份量，计入统计时乘以它 */
+    eatenFraction: real("eaten_fraction").notNull().default(1),
   },
   (t) => [index("meal_items_meal_idx").on(t.mealId)],
 );

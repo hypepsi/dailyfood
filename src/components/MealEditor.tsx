@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { PortionFix, EATEN_OPTIONS, fractionLabel } from "./PortionFix";
 import { MEAL_TYPES, type MealType } from "@/db/schema";
 import { parseNumber, request } from "@/lib/client-api";
 import { MEAL_LABELS, round1 } from "@/lib/nutrition";
@@ -16,6 +17,7 @@ export type EditorItem = {
   carbsG: number;
   fatG: number;
   personal?: boolean;
+  eatenFraction?: number;
   confidence?: "high" | "medium" | "low";
 };
 
@@ -39,6 +41,8 @@ type Row = {
   fat: string;
   /** 多人分食时，这一项只有自己吃 */
   personal: boolean;
+  /** 实际吃掉的比例，1 = 全吃了 */
+  eaten: number;
   confidence?: EditorItem["confidence"];
   open: boolean;
   /** 改重量时按这组数值等比例换算 */
@@ -59,13 +63,14 @@ function toRow(item: EditorItem): Row {
     carbs: str(item.carbsG),
     fat: str(item.fatG),
     personal: item.personal ?? false,
+    eaten: item.eatenFraction ?? 1,
     confidence: item.confidence,
     open: false,
     base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
   };
 }
 
-const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", personal: false, open: true, base: null });
+const emptyRow = (): Row => ({ key: nextKey++, name: "", quantity: "", weight: "", kcal: "", protein: "", carbs: "", fat: "", personal: false, eaten: 1, open: true, base: null });
 
 const num = (s: string) => parseNumber(s) ?? 0;
 
@@ -87,7 +92,8 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
 
   // 明细是整桌的量；“我的份”= 整桌 ÷ 人数
   const tableKcal = Math.round(rows.reduce((s, r) => s + num(r.kcal), 0));
-  const mine = (pick: (r: Row) => string) => rows.reduce((s, r) => s + num(pick(r)) / (r.personal ? 1 : people), 0);
+  const mine = (pick: (r: Row) => string) => rows.reduce((s, r) => s + (num(pick(r)) * r.eaten) / (r.personal ? 1 : people), 0);
+  const corrected = rows.some((r) => r.eaten !== 1);
   const total = {
     kcal: Math.round(mine((r) => r.kcal)),
     protein: round1(mine((r) => r.protein)),
@@ -139,6 +145,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         carbsG: num(r.carbs),
         fatG: num(r.fat),
         personal: people > 1 && r.personal,
+        eatenFraction: r.eaten,
       });
     }
     if (items.length === 0) return setError("至少保留一项食物");
@@ -229,6 +236,14 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </section>
       )}
 
+      {mode === "edit" && mealId !== undefined && (
+        <PortionFix
+          mealId={mealId}
+          items={rows.map((r) => ({ name: r.name, quantity: r.quantity, eaten: r.eaten }))}
+          onApply={(fractions) => setRows((rs) => rs.map((r, i) => (fractions[i] === null || fractions[i] === undefined ? r : { ...r, eaten: fractions[i] as number })))}
+        />
+      )}
+
       <section className="card">
         <div className="grid grid-cols-4 gap-1 rounded-2xl bg-bg p-1">
           {MEAL_TYPES.map((t) => (
@@ -241,9 +256,9 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
             </button>
           ))}
         </div>
-        <div className="mt-3 flex gap-3">
-          <input type="date" className="field flex-1" value={date} max={today} onChange={(e) => setDate(e.target.value)} aria-label="日期" />
-          <input type="time" className="field w-36" value={time} onChange={(e) => setTime(e.target.value)} aria-label="时间" />
+        <div className="mt-3 flex gap-2">
+          <input type="date" className="field min-w-0 flex-1 px-3" value={date} max={today} onChange={(e) => setDate(e.target.value)} aria-label="日期" />
+          <input type="time" className="field w-32 shrink-0 px-3" value={time} onChange={(e) => setTime(e.target.value)} aria-label="时间" />
         </div>
 
         <div className="mt-4 border-t border-line pt-3">
@@ -298,6 +313,26 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
             <Field label="重量 g" value={row.weight} onChange={(v) => changeWeight(row, v)} numeric />
             <Field label="热量 kcal" value={row.kcal} onChange={(v) => changeValue(row, "kcal", v)} numeric strong />
           </div>
+          {(mode === "edit" || row.eaten !== 1) && (
+            <div className="mt-2.5 flex items-center gap-1.5">
+              <span className="mr-0.5 shrink-0 text-xs text-muted">实际吃了</span>
+              {[...EATEN_OPTIONS, ...(EATEN_OPTIONS.some((o) => o.value === row.eaten) ? [] : [{ value: row.eaten, label: fractionLabel(row.eaten) }])].map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => update(row.key, { eaten: o.value })}
+                  aria-pressed={row.eaten === o.value}
+                  className={`flex-1 rounded-lg border py-1.5 text-xs transition-colors ${row.eaten === o.value ? "border-accent bg-accent font-bold text-white" : "border-line bg-bg text-muted"}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {row.eaten !== 1 && (
+            <p className="num mt-1.5 text-xs text-accent-deep">
+              按{fractionLabel(row.eaten)}计入 {Math.round(num(row.kcal) * row.eaten)} kcal（原 {Math.round(num(row.kcal))}）
+            </p>
+          )}
           {row.open ? (
             <div className="mt-2 grid grid-cols-3 gap-2">
               <Field label="蛋白质 g" value={row.protein} onChange={(v) => changeValue(row, "protein", v)} numeric />
@@ -333,7 +368,11 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
                 {total.kcal} <span className="text-sm font-semibold">kcal</span>
               </div>
               <div className="num text-xs text-faint">
-                {people > 1 ? `我的一份 · 整桌共 ${tableKcal} kcal · ${people} 人` : `蛋白 ${total.protein} · 碳水 ${total.carbs} · 脂肪 ${total.fat} g`}
+                {people > 1
+                  ? `我的一份 · 整桌共 ${tableKcal} kcal · ${people} 人`
+                  : corrected
+                    ? `已按实际吃的量修正 · 原 ${tableKcal} kcal`
+                    : `蛋白 ${total.protein} · 碳水 ${total.carbs} · 脂肪 ${total.fat} g`}
               </div>
             </div>
             <button className="btn-primary px-8" onClick={save} disabled={busy !== ""}>

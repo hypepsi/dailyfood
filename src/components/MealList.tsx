@@ -32,29 +32,33 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
               </Link>
             </div>
             {list.map((meal) => (
-              <Link key={meal.id} href={`/meal/${meal.id}`} className="mt-1.5 flex items-center gap-2.5 rounded-xl p-0.5 transition-colors lg:mt-2 lg:gap-3 lg:hover:bg-bg active:bg-bg">
-                {meal.thumbPath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/meals/${meal.id}/image?size=thumb`}
-                    alt=""
-                    loading="lazy"
-                    className="h-12 w-12 shrink-0 rounded-xl object-cover lg:h-14 lg:w-14"
-                  />
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 lg:h-14 lg:w-14 items-center justify-center rounded-xl bg-tint text-base font-semibold text-accent">
-                    {(meal.title || MEAL_LABELS[type]).slice(0, 1)}
+              <div key={meal.id} className="mt-1.5 flex items-center gap-1.5 lg:mt-2">
+                <Link href={`/meal/${meal.id}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-0.5 transition-colors active:bg-bg lg:gap-3 lg:hover:bg-bg">
+                  {meal.thumbPath ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={`/api/meals/${meal.id}/image?size=thumb`} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover lg:h-14 lg:w-14" />
+                  ) : (
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-tint text-base font-semibold text-accent lg:h-14 lg:w-14">
+                      {(meal.title || MEAL_LABELS[type]).slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{meal.title || meal.items.map((i) => i.name).join("、")}</span>
+                    <span className="num block truncate text-[13px] text-faint">
+                      {timeFmt.format(meal.eatenAt)} · 蛋白质 {Math.round(meal.totals.proteinG)} g
+                      {meal.sharePeople > 1 && ` · ${meal.sharePeople} 人分食`}
+                      {meal.items.some((i) => i.eatenFraction !== 1) && " · 已修正"}
+                    </span>
                   </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{meal.title || meal.items.map((i) => i.name).join("、")}</span>
-                  <span className="num block text-[13px] text-faint">
-                    {timeFmt.format(meal.eatenAt)} · 蛋白质 {Math.round(meal.totals.proteinG)} g
-                    {meal.sharePeople > 1 && ` · ${meal.sharePeople} 人分食`}
-                  </span>
-                </span>
-                <span className="num shrink-0 font-bold">{meal.totals.kcal}</span>
-              </Link>
+                  <span className="num shrink-0 font-bold">{meal.totals.kcal}</span>
+                </Link>
+                <Link
+                  href={`/meal/${meal.id}#fix`}
+                  className="shrink-0 rounded-full border border-line px-2.5 py-1.5 text-xs font-semibold text-muted transition-colors active:bg-line lg:hover:border-accent lg:hover:text-accent"
+                >
+                  修正
+                </Link>
+              </div>
             ))}
           </div>
         );

@@ -57,31 +57,31 @@ export function CaptureActions({ date, isToday }: Props) {
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} />
       <input ref={albumInput} type="file" accept="image/*" hidden onChange={onChange} />
 
-      <div className="flex gap-3">
-        <button className="btn-primary flex-1 py-5 text-lg shadow-card" onClick={() => cameraInput.current?.click()}>
-          <Camera size={24} />
+      <div className="flex gap-2.5">
+        <button className="btn-primary flex-1 py-4 text-[17px] shadow-card" onClick={() => cameraInput.current?.click()}>
+          <Camera size={21} />
           {isToday ? "拍一顿" : "补拍一顿"}
         </button>
         <button
-          className="btn-secondary w-[68px] flex-col gap-1 px-0 text-xs text-muted"
+          className="btn-secondary w-16 flex-col gap-0.5 px-0 py-2 text-xs text-muted"
           onClick={() => albumInput.current?.click()}
         >
-          <Images size={22} />
+          <Images size={19} />
           相册
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="mt-2.5 grid grid-cols-3 gap-2.5">
         <Link href="/weight" className="btn-secondary">
-          <Scale size={18} className="text-accent" />
-          记体重
+          <Scale size={16} className="text-accent" />
+          身体数据
         </Link>
         <Link href={`/meal/new?date=${date}`} className="btn-secondary">
-          <PencilLine size={18} className="text-accent" />
+          <PencilLine size={16} className="text-accent" />
           手动记录
         </Link>
         <Link href="/chat" className="btn-secondary">
-          <MessageCircle size={18} className="text-accent" />
+          <MessageCircle size={16} className="text-accent" />
           问 AI
         </Link>
       </div>
@@ -95,7 +95,7 @@ export function CaptureActions({ date, isToday }: Props) {
           ) : (
             <>
               <p className="text-center text-lg">{error}</p>
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <button className="rounded-2xl bg-white/15 px-6 py-3" onClick={closeOverlay}>
                   关闭
                 </button>

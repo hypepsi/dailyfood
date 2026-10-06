@@ -50,6 +50,8 @@
 }
 
 html {
+  /* 整体比浏览器默认略小一号，界面更紧凑；所有 rem 尺寸随之缩放 */
+  font-size: 15px;
   background: var(--bg);
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
@@ -78,9 +80,9 @@ select {
     @apply w-full rounded-2xl border border-line bg-bg px-4 py-3 text-ink outline-none transition-colors placeholder:text-faint focus:border-accent;
   }
   .btn-primary {
-    @apply flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50;
+    @apply flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3.5 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50;
   }
   .btn-secondary {
-    @apply flex items-center justify-center gap-2 rounded-2xl border border-line bg-card px-4 py-3 text-sm font-medium text-ink transition active:scale-[0.98] disabled:opacity-50;
+    @apply flex items-center justify-center gap-2 rounded-2xl border border-line bg-card px-3 py-2.5 text-sm font-medium text-ink transition active:scale-[0.98] disabled:opacity-50;
   }
 }

@@ -7,7 +7,7 @@ import { getDailyTotals, getPendingDrafts } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
 import { getDaySummary, getWeightStats } from "@/services/snapshot";
 import { AdviceCard } from "./AdviceCard";
-import { BigStat, Card, ProgressBar, StatRow } from "./Card";
+import { BigStat, Card, MiniCard, StatRow } from "./Card";
 import { CaptureActions } from "./CaptureActions";
 import { MealList } from "./MealList";
 import { Sparkline } from "./Sparkline";
@@ -26,6 +26,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const day = getDaySummary(user, date);
   const { totals, goals } = day;
   const over = day.kcalRemaining < 0;
+  const proteinDone = day.proteinRemaining <= 0;
 
   const week = getDailyTotals(user, addDays(date, -6), date);
   const weekAvg = week.length ? Math.round(week.reduce((s, d) => s + d.kcal, 0) / week.length) : null;
@@ -36,17 +37,17 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const toGoal = weight.avg7Kg !== null && goals.targetWeightKg !== null ? weight.avg7Kg - goals.targetWeightKg : null;
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-center justify-between pb-1">
+    <div className="space-y-3">
+      <header className="flex items-center justify-between">
         <Link href={`/day/${addDays(date, -1)}`} aria-label="前一天" className="flex h-11 w-11 items-center justify-center rounded-full text-muted active:bg-line">
           <ChevronLeft size={24} />
         </Link>
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{formatDateCn(date)}</h1>
+          <h1 className="text-xl font-bold">{formatDateCn(date)}</h1>
           {isToday ? (
-            <p className="mt-0.5 text-sm text-faint">今天</p>
+            <p className="text-[13px] text-faint">今天</p>
           ) : (
-            <Link href="/" className="mt-0.5 block text-sm text-accent">
+            <Link href="/" className="block text-[13px] text-accent">
               回到今天
             </Link>
           )}
@@ -63,44 +64,35 @@ export function DayView({ user, date, today }: { user: User; date: string; today
       <CaptureActions date={date} isToday={isToday} />
 
       {drafts.map((d) => (
-        <Link key={d.id} href={`/meal/${d.id}`} className="flex items-center justify-between rounded-2xl bg-warn-tint px-5 py-3.5 text-warn">
+        <Link key={d.id} href={`/meal/${d.id}`} className="flex items-center justify-between rounded-2xl bg-warn-tint px-4 py-3 text-sm text-warn">
           <span>「{d.title || "一顿饭"}」还没确认，未计入今天</span>
           <ChevronRight size={18} />
         </Link>
       ))}
 
-      <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
-        <BigStat
-          label={over ? "已超出今日目标" : isToday ? "今日剩余" : "当日剩余"}
+      <div className="grid grid-cols-2 gap-3">
+        <MiniCard
+          icon={Flame}
+          title="热量"
+          href="/trends"
+          label={over ? "已超出" : "还能吃"}
           value={Math.abs(day.kcalRemaining).toLocaleString("en-US")}
           unit="kcal"
           tone={over ? "warn" : "accent"}
+          progress={{ value: totals.kcal, max: goals.calorieTarget }}
+          footer={`已吃 ${totals.kcal} / ${goals.calorieTarget}`}
         />
-        <ProgressBar value={totals.kcal} max={goals.calorieTarget} over={over} />
-        <StatRow
-          stats={[
-            { label: "已摄入", value: `${totals.kcal}` },
-            { label: "目标", value: `${goals.calorieTarget}` },
-            { label: "近7天日均", value: weekAvg === null ? "—" : `${weekAvg}` },
-          ]}
+        <MiniCard
+          icon={Egg}
+          title="蛋白质"
+          href="/trends"
+          label={proteinDone ? "已达标" : "还差"}
+          value={`${Math.round(proteinDone ? totals.proteinG : day.proteinRemaining)}`}
+          unit="g"
+          progress={{ value: totals.proteinG, max: goals.proteinTargetG }}
+          footer={`已吃 ${Math.round(totals.proteinG)} / ${goals.proteinTargetG} g`}
         />
-      </Card>
-
-      <Card icon={Egg} title="蛋白质">
-        <BigStat
-          label="已摄入"
-          value={`${Math.round(totals.proteinG)}`}
-          unit={`/ ${goals.proteinTargetG} g`}
-          sub={day.proteinRemaining > 0 ? `还差 ${Math.round(day.proteinRemaining)} g` : "已达标"}
-        />
-        <ProgressBar value={totals.proteinG} max={goals.proteinTargetG} />
-        <StatRow
-          stats={[
-            { label: "碳水", value: `${Math.round(totals.carbsG)} g` },
-            { label: "脂肪", value: `${Math.round(totals.fatG)} g` },
-          ]}
-        />
-      </Card>
+      </div>
 
       {isToday && day.meals.length > 0 && (
         <AdviceCard refreshKey={day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")} />
@@ -108,12 +100,16 @@ export function DayView({ user, date, today }: { user: User; date: string; today
 
       <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
         <MealList meals={day.meals} date={date} timezone={user.timezone} />
+        <p className="num mt-3 border-t border-line pt-3 text-[13px] text-muted">
+          碳水 {Math.round(totals.carbsG)} g · 脂肪 {Math.round(totals.fatG)} g
+          {weekAvg !== null && <span className="float-right text-faint">近7天日均 {weekAvg} kcal</span>}
+        </p>
       </Card>
 
       <Card icon={Scale} title="体重" action={{ href: "/weight", label: "历史", icon: History }}>
         {weight.latestKg === null ? (
-          <Link href="/weight" className="block py-2 text-muted">
-            还没有体重记录，点这里记一次 →
+          <Link href="/weight" className="block py-1 text-muted">
+            还没有体重记录，上传一张体脂秤报告 →
           </Link>
         ) : (
           <>

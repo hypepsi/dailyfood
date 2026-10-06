@@ -15,7 +15,7 @@ export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <ul className="mx-auto flex max-w-xl">
+      <ul className="mx-auto flex max-w-md">
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           return (

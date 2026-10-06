@@ -53,8 +53,8 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const chartRange = { from, to: today };
 
   return (
-    <div className="space-y-4">
-      <h1 className="pb-1 text-center text-2xl font-bold">趋势</h1>
+    <div className="space-y-3">
+      <h1 className="text-center text-xl font-bold">趋势</h1>
 
       <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1">
         {RANGES.map((r) => (
@@ -77,7 +77,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         ) : (
           <>
             <BigStat label="7日平均" value={weightAvg.at(-1)!.value.toFixed(1)} unit="kg" />
-            <div className="mt-4">
+            <div className="mt-2">
               <TrendChart kind="line" {...chartRange} unit="kg" digits={1} primary={{ label: "7日平均", points: weightAvg }} secondary={{ label: "当日体重", points: weights }} />
             </div>
             <StatRow
@@ -97,7 +97,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         ) : (
           <>
             <BigStat label="平均每日摄入" value={`${Math.round(avgKcal)}`} unit="kcal" />
-            <div className="mt-4">
+            <div className="mt-2">
               <TrendChart kind="bar" {...chartRange} unit="kcal" primary={{ label: "热量", points: intake.map((d) => ({ date: d.date, value: d.kcal })) }} target={{ label: "目标", value: goals.calorieTarget }} />
             </div>
             <StatRow
@@ -115,7 +115,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
       {avgProtein !== null && (
         <Card icon={Egg} title="蛋白质">
           <BigStat label="平均每日摄入" value={`${Math.round(avgProtein)}`} unit="g" />
-          <div className="mt-4">
+          <div className="mt-2">
             <TrendChart kind="bar" {...chartRange} unit="g" primary={{ label: "蛋白质", points: intake.map((d) => ({ date: d.date, value: Math.round(d.proteinG) })) }} target={{ label: "目标", value: goals.proteinTargetG }} />
           </div>
           <StatRow
@@ -131,7 +131,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         <Card icon={Percent} title="体脂率">
           <BigStat label="最新" value={bodyFat.at(-1)!.value.toFixed(1)} unit="%" />
           {bodyFat.length > 1 && (
-            <div className="mt-4">
+            <div className="mt-2">
               <TrendChart kind="line" {...chartRange} unit="%" digits={1} primary={{ label: "体脂率", points: bodyFat }} />
             </div>
           )}
@@ -142,7 +142,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
         <Card icon={Ruler} title="腰围">
           <BigStat label="最新" value={waist.at(-1)!.value.toFixed(1)} unit="cm" />
           {waist.length > 1 && (
-            <div className="mt-4">
+            <div className="mt-2">
               <TrendChart kind="line" {...chartRange} unit="cm" digits={1} primary={{ label: "腰围", points: waist }} />
             </div>
           )}

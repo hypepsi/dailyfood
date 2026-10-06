@@ -34,7 +34,7 @@ export function AccountActions({ username }: { username: string }) {
   }
 
   return (
-    <section className="rounded-[28px] border border-line bg-card p-5 shadow-card">
+    <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
       <h2 className="text-sm font-semibold text-accent">账号</h2>
       <p className="mt-2 text-muted">登录名：{username}</p>
       {message && <p className={`mt-2 text-sm ${message.ok ? "text-accent" : "text-warn"}`}>{message.text}</p>}

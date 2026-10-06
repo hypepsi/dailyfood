@@ -73,7 +73,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
 
   return (
     <form onSubmit={save} className="space-y-4">
-      <section className="rounded-[28px] border border-line bg-card px-5 py-2 shadow-card">
+      <section className="rounded-3xl border border-line bg-card px-4 py-1.5 shadow-card">
         <h2 className="pb-1 pt-3 text-sm font-semibold text-accent">目标</h2>
         <div className="divide-y divide-line">
           <Row label="每日热量" hint={bmrHint ?? undefined}>
@@ -88,7 +88,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-line bg-card px-5 py-2 shadow-card">
+      <section className="rounded-3xl border border-line bg-card px-4 py-1.5 shadow-card">
         <h2 className="pb-1 pt-3 text-sm font-semibold text-accent">个人资料</h2>
         <div className="divide-y divide-line">
           <Row label="称呼">

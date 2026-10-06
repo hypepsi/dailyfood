@@ -7,8 +7,8 @@ export default async function SettingsPage() {
   const user = await requireUser();
   const { bmr } = buildSnapshot(user);
   return (
-    <div className="space-y-4">
-      <h1 className="pb-1 text-center text-2xl font-bold">我的</h1>
+    <div className="space-y-3">
+      <h1 className="text-center text-xl font-bold">我的</h1>
       <SettingsForm
         key={user.updatedAt}
         bmrHint={bmr ? `基础代谢约 ${Math.round(bmr.value)} kcal（${bmr.source}），不建议低于它` : null}

@@ -23,9 +23,9 @@ export function AdviceCard({ refreshKey }: { refreshKey: string }) {
 
   if (!loading && !advice) return null;
   return (
-    <section className="flex gap-3 rounded-[28px] bg-tint p-5">
-      <Sparkles size={20} className="mt-0.5 shrink-0 text-accent" />
-      <p className={`leading-relaxed text-accent-deep ${loading ? "animate-pulse" : ""}`}>
+    <section className="flex gap-2.5 rounded-3xl bg-tint p-4">
+      <Sparkles size={17} className="mt-0.5 shrink-0 text-accent" />
+      <p className={`text-sm leading-relaxed text-accent-deep ${loading ? "animate-pulse" : ""}`}>
         {loading ? "正在看今天的记录…" : advice}
       </p>
     </section>

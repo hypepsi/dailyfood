@@ -50,7 +50,7 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
     <div className="flex min-h-[calc(100dvh-11rem)] flex-col">
       <header className="mb-4 flex items-center">
         <span className="w-12" />
-        <h1 className="flex-1 text-center text-2xl font-bold">问 AI</h1>
+        <h1 className="flex-1 text-center text-xl font-bold">问 AI</h1>
         <button className="w-12 text-right text-sm text-faint" onClick={clear} hidden={messages.length === 0}>
           清空
         </button>
@@ -62,7 +62,7 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
             <p className="mb-4 text-center text-muted">回答会基于你记录的真实数据</p>
             <div className="space-y-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} className="btn-secondary w-full justify-start py-4 text-base" onClick={() => send(s)}>
+                <button key={s} className="btn-secondary w-full justify-start px-4 py-3 text-[15px]" onClick={() => send(s)}>
                   {s}
                 </button>
               ))}
@@ -72,7 +72,7 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-3xl px-4 py-3 leading-relaxed ${
+              className={`max-w-[85%] whitespace-pre-wrap rounded-3xl px-3.5 py-2.5 leading-relaxed ${
                 m.role === "user" ? "rounded-br-lg bg-accent text-white" : "rounded-bl-lg border border-line bg-card shadow-card"
               }`}
             >
@@ -96,7 +96,7 @@ export function ChatView({ initial }: { initial: ChatMessage[] }) {
           void send(text);
         }}
       >
-        <div className="mx-auto flex max-w-xl items-center gap-2 px-4 py-2.5">
+        <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-2.5">
           <input className="field flex-1 rounded-full bg-card" placeholder="问点什么…" maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
           <button aria-label="发送" disabled={busy || !text.trim()} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-white disabled:opacity-40">
             <ArrowUp size={22} />

@@ -178,13 +178,13 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
   const questions = mode === "draft" ? (estimate?.questions ?? []) : [];
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-3 pb-24">
       {estimate && (
-        <section className="rounded-[28px] bg-tint p-5 text-accent-deep">
+        <section className="rounded-3xl bg-tint p-4 text-accent-deep">
           <div className="text-sm opacity-80">AI 估算</div>
-          <div className="num mt-0.5 text-2xl font-bold">
+          <div className="num mt-0.5 text-xl font-bold">
             约 {estimate.totalKcal} kcal
-            <span className="ml-2 text-base font-medium opacity-80">
+            <span className="ml-2 text-sm font-medium opacity-80">
               合理范围 {estimate.kcalLow}～{estimate.kcalHigh}
             </span>
           </div>
@@ -193,7 +193,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
       )}
 
       {questions.length > 0 && (
-        <section className="rounded-[28px] border border-line bg-card p-5 shadow-card">
+        <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
           <p className="mb-3 text-sm text-faint">回答一下会更准，也可以直接跳过</p>
           {questions.map((q, i) => (
             <div key={i} className="mb-4 last:mb-0">
@@ -219,7 +219,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </section>
       )}
 
-      <section className="rounded-[28px] border border-line bg-card p-5 shadow-card">
+      <section className="rounded-3xl border border-line bg-card p-4 shadow-card">
         <div className="grid grid-cols-4 gap-1 rounded-2xl bg-bg p-1">
           {MEAL_TYPES.map((t) => (
             <button
@@ -233,15 +233,15 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </div>
         <div className="mt-3 flex gap-3">
           <input type="date" className="field flex-1" value={date} max={today} onChange={(e) => setDate(e.target.value)} aria-label="日期" />
-          <input type="time" className="field w-32" value={time} onChange={(e) => setTime(e.target.value)} aria-label="时间" />
+          <input type="time" className="field w-36" value={time} onChange={(e) => setTime(e.target.value)} aria-label="时间" />
         </div>
       </section>
 
       {rows.map((row) => (
-        <section key={row.key} className="rounded-[28px] border border-line bg-card p-5 shadow-card">
+        <section key={row.key} className="rounded-3xl border border-line bg-card p-4 shadow-card">
           <div className="flex items-center gap-2">
             <input
-              className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-faint"
+              className="min-w-0 flex-1 bg-transparent text-base font-semibold outline-none placeholder:font-normal placeholder:text-faint"
               placeholder="食物名称"
               value={row.name}
               onChange={(e) => update(row.key, { name: e.target.value })}
@@ -251,7 +251,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
               <Trash2 size={18} />
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-2.5 grid grid-cols-3 gap-2">
             <Field label="数量" value={row.quantity} onChange={(v) => update(row.key, { quantity: v })} placeholder="如 1 碗" />
             <Field label="重量 g" value={row.weight} onChange={(v) => changeWeight(row, v)} numeric />
             <Field label="热量 kcal" value={row.kcal} onChange={(v) => changeValue(row, "kcal", v)} numeric strong />
@@ -263,7 +263,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
               <Field label="脂肪 g" value={row.fat} onChange={(v) => changeValue(row, "fat", v)} numeric />
             </div>
           ) : (
-            <button className="num mt-3 flex w-full items-center text-sm text-faint" onClick={() => update(row.key, { open: true })}>
+            <button className="num mt-2.5 flex w-full items-center text-[13px] text-faint" onClick={() => update(row.key, { open: true })}>
               蛋白质 {num(row.protein)} · 碳水 {num(row.carbs)} · 脂肪 {num(row.fat)} g
               <ChevronDown size={16} className="ml-1" />
             </button>
@@ -283,7 +283,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-        <div className="mx-auto max-w-xl px-4 py-3">
+        <div className="mx-auto max-w-md px-4 py-3">
           {error && <p className="mb-2 text-sm text-warn">{error}</p>}
           <div className="flex items-center gap-4">
             <div className="flex-1">
@@ -306,7 +306,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
 
 function Field(props: { label: string; value: string; onChange: (v: string) => void; numeric?: boolean; strong?: boolean; placeholder?: string }) {
   return (
-    <label className="block rounded-2xl bg-bg px-3 py-2">
+    <label className="block rounded-xl bg-bg px-3 py-1.5">
       <span className="block text-xs text-faint">{props.label}</span>
       <input
         className={`num w-full bg-transparent outline-none placeholder:text-faint ${props.strong ? "font-semibold text-accent-deep" : ""}`}

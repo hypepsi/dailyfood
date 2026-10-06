@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import type { BodyMetric, User } from "@/db/schema";
+import type { BodyReport } from "@/lib/ai/read-body-report";
 import { badRequest, notFound } from "@/lib/errors";
 import { isDateString, localParts, zonedToUtc } from "@/lib/time";
 import type { DailyValue } from "@/lib/weight";
@@ -51,6 +52,35 @@ export function addMetric(user: User, input: MetricInput): number {
     .values({ ...values, note, userId: user.id, localDate: date, measuredAt, createdAt: now })
     .returning({ id: bodyMetrics.id })
     .get().id;
+}
+
+/**
+ * 保存从体脂秤报告识别出的数据。
+ * 以报告上的测量日期为准；同一天已有记录时用这份报告覆盖，重复上传不会产生重复数据。
+ */
+export function recordReport(user: User, report: BodyReport): { id: number; date: string; replaced: boolean } {
+  const now = Date.now();
+  const local = localParts(now, user.timezone);
+  const date = report.date && report.date <= local.date ? report.date : local.date;
+  const measuredAt = date === local.date ? now : zonedToUtc(date, "08:00", user.timezone);
+  const sameDay = and(eq(bodyMetrics.userId, user.id), eq(bodyMetrics.localDate, date));
+  return getDb().transaction((tx) => {
+    const replaced = tx.delete(bodyMetrics).where(sameDay).run().changes > 0;
+    const row = tx
+      .insert(bodyMetrics)
+      .values({
+        ...report.core,
+        userId: user.id,
+        localDate: date,
+        measuredAt,
+        source: "report",
+        extra: Object.keys(report.extra).length ? JSON.stringify(report.extra) : null,
+        createdAt: now,
+      })
+      .returning({ id: bodyMetrics.id })
+      .get();
+    return { id: row.id, date, replaced };
+  });
 }
 
 export function deleteMetric(user: User, id: number) {

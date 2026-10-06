@@ -111,6 +111,10 @@ export const bodyMetrics = sqliteTable(
     visceralFat: real("visceral_fat"),
     bmrKcal: real("bmr_kcal"),
     note: text("note"),
+    /** manual=手动输入；report=从体脂秤报告图片识别 */
+    source: text("source", { enum: ["manual", "report"] }).notNull().default("manual"),
+    /** 报告里的其他指标（JSON：蛋白质量、体水分、骨盐量等），只展示不参与计算 */
+    extra: text("extra"),
     createdAt: createdAt(),
   },
   (t) => [index("body_metrics_user_date_idx").on(t.userId, t.localDate)],

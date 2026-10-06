@@ -24,7 +24,7 @@ export function DeleteButton({ url, confirmText }: { url: string; confirmText: s
   }
 
   return (
-    <button aria-label="删除" disabled={busy} onClick={remove} className="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-faint active:bg-line disabled:opacity-40">
+    <button aria-label="删除" disabled={busy} onClick={remove} className="-mr-2 -mt-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-faint active:bg-line disabled:opacity-40">
       <Trash2 size={17} />
     </button>
   );

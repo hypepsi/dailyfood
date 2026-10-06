@@ -44,3 +44,21 @@ export async function saveMealImage(userId: number, input: Buffer, now = new Dat
 export async function removeImages(...keys: (string | null | undefined)[]) {
   await Promise.all(keys.filter((k): k is string => !!k).map((k) => storage.remove(k)));
 }
+
+/**
+ * 把上传的截图整理成发给模型的图片（不落盘）。
+ * 报告上是小字，保留更高的分辨率和质量。
+ */
+export async function prepareDocumentImage(input: Buffer): Promise<Buffer> {
+  if (input.length === 0) throw new AppError(400, "bad_image", "没有收到图片");
+  if (input.length > MAX_UPLOAD_BYTES) throw new AppError(413, "image_too_large", "图片太大了，请换一张");
+  try {
+    return await sharp(input, { limitInputPixels: 50_000_000, failOn: "error" })
+      .rotate()
+      .resize(2000, 2000, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 90 })
+      .toBuffer();
+  } catch {
+    throw new AppError(400, "bad_image", "无法读取这张图片，请换一张");
+  }
+}

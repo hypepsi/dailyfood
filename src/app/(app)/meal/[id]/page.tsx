@@ -49,7 +49,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
       <PageHeader title={isDraft ? "确认这顿饭" : "修改记录"} backHref={meal.localDate === today ? "/" : `/day/${meal.localDate}`} />
       {meal.thumbPath && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/api/meals/${meal.id}/image`} alt="食物照片" className="mb-4 max-h-72 w-full rounded-[28px] object-cover" />
+        <img src={`/api/meals/${meal.id}/image`} alt="食物照片" className="mb-3 max-h-48 w-full rounded-3xl object-cover" />
       )}
       <MealEditor
         key={meal.updatedAt}

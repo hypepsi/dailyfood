@@ -31,7 +31,9 @@ export function WeightForm({ today, lastWeight }: { today: string; lastWeight: n
       const payload: Record<string, unknown> = { date, weightKg: parseNumber(weight) };
       for (const f of EXTRA_FIELDS) payload[f.key] = parseNumber(extra[f.key] ?? "");
       await request("POST", "/api/metrics", payload);
-      router.push("/");
+      setWeight("");
+      setExtra({});
+      setBusy(false);
       router.refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -42,15 +44,14 @@ export function WeightForm({ today, lastWeight }: { today: string; lastWeight: n
   const hasAny = weight.trim() || Object.values(extra).some((v) => v.trim());
 
   return (
-    <form onSubmit={submit} className="rounded-[28px] border border-line bg-card p-5 shadow-card">
+    <form onSubmit={submit}>
       <label className="block text-sm text-faint" htmlFor="weight">
         体重（kg）
       </label>
       <input
         id="weight"
-        className="num w-full bg-transparent py-2 text-5xl font-bold text-accent-deep outline-none placeholder:text-line"
+        className="num w-full bg-transparent py-1 text-4xl font-bold text-accent-deep outline-none placeholder:text-line"
         inputMode="decimal"
-        autoFocus
         placeholder={lastWeight ? lastWeight.toFixed(1) : "0.0"}
         value={weight}
         onChange={(e) => setWeight(e.target.value)}

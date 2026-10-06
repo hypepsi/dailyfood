@@ -14,12 +14,8 @@ describe("每日消耗", () => {
   it("没有手表数据时按活动水平估算", () => {
     expect(dayBurn(energy, null)).toEqual({ burn: 2460, bmr: 1789, active: 671, source: "estimate" });
   });
-  it("活动消耗要加上基础代谢；全天总消耗不再加", () => {
-    expect(dayBurn(energy, { kcal: 1086, kind: "active" })).toMatchObject({ burn: 2875, active: 1086, source: "watch" });
-    expect(dayBurn(energy, { kcal: 2700, kind: "total" })).toMatchObject({ burn: 2700, active: 911, source: "watch" });
-  });
-  it("全天总消耗低于基础代谢（一天没过完）时按基础代谢算", () => {
-    expect(dayBurn(energy, { kcal: 900, kind: "total" }).burn).toBe(1789);
+  it("手表的运动消耗要加上基础代谢", () => {
+    expect(dayBurn(energy, { kcal: 1086 })).toEqual({ burn: 2875, bmr: 1789, active: 1086, source: "watch" });
   });
 });
 
@@ -65,12 +61,12 @@ describe("热量差汇总", () => {
     expect(s.settled).toBe(false);
     expect(s.deficitAtTarget).toBe(460);
 
-    setActivity(user, { date: TODAY, kcal: 1086, kind: "active" });
+    setActivity(user, { date: TODAY, kcal: 1086 });
     s = getDeficitSummary(user, TODAY, NOW)!;
     expect(s.day).toMatchObject({ burn: 2875, deficit: 1875, source: "watch" });
     expect(s.deficitAtTarget).toBe(875);
 
-    setActivity(user, { date: TODAY, kcal: 1200, kind: "active" }); // 同一天再录是更新
+    setActivity(user, { date: TODAY, kcal: 1200 }); // 同一天再录是更新
     expect(getDeficitSummary(user, TODAY, NOW)!.day.burn).toBe(2989);
     clearActivity(user, TODAY);
     expect(getDeficitSummary(user, TODAY, NOW)!.day.source).toBe("estimate");

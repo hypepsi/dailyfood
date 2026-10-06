@@ -130,12 +130,8 @@ export const bodyMetrics = sqliteTable(
   (t) => [index("body_metrics_user_date_idx").on(t.userId, t.localDate)],
 );
 
-export const ACTIVITY_KINDS = ["active", "total"] as const;
-export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
-
 /**
- * 用户从手表等设备抄来的当天消耗，每人每天一条。
- * kind=active：活动消耗（不含基础代谢）；kind=total：全天总消耗（已含基础代谢）。
+ * 用户从手表抄来的当天运动消耗（不含基础代谢），每人每天一条。
  * 没有记录的日子按活动水平估算。
  */
 export const activityLogs = sqliteTable(
@@ -145,7 +141,6 @@ export const activityLogs = sqliteTable(
     userId: userId(),
     localDate: text("local_date").notNull(),
     kcal: integer("kcal").notNull(),
-    kind: text("kind", { enum: ACTIVITY_KINDS }).notNull(),
     createdAt: createdAt(),
     updatedAt: integer("updated_at").notNull(),
   },

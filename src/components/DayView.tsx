@@ -6,7 +6,7 @@ import { kgToJin, rollingAverage } from "@/lib/weight";
 import { getDailyTotals, getPendingDrafts } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
 import { ACTIVITY } from "@/lib/goals";
-import { getActivities, lastActivityKind } from "@/services/activity";
+import { getActivities } from "@/services/activity";
 import { getDaySummary, getDeficitSummary, getEnergy, getWeightStats } from "@/services/snapshot";
 import { ActivityCard } from "./ActivityCard";
 import { AdviceCard } from "./AdviceCard";
@@ -115,12 +115,11 @@ export function DayView({ user, date, today }: { user: User; date: string; today
       <DeficitCard summary={deficit} isToday={isToday} />
 
       <ActivityCard
-        key={`${date}:${activity?.kcal ?? ""}:${activity?.kind ?? ""}`}
+        key={`${date}:${activity?.kcal ?? ""}`}
         date={date}
         isToday={isToday}
         burn={deficit?.day ?? null}
         entry={activity}
-        defaultKind={lastActivityKind(user)}
         estimateBasis={energy ? `基础代谢 ${energy.bmr} × 活动系数 ${ACTIVITY[user.activityLevel].factor}` : ""}
       />
 

@@ -173,7 +173,7 @@ export function renderSnapshot(s: Snapshot): string {
     const d = s.deficit;
     lines.push(
       d.day.source === "watch"
-        ? `今天的消耗：${d.day.burn} kcal（基础代谢 ${d.day.bmr} + 用户从手表录入的活动消耗 ${d.day.active}；一天没过完时这个数还会涨）`
+        ? `今天的消耗：${d.day.burn} kcal（基础代谢 ${d.day.bmr} + 用户从手表录入的运动消耗 ${d.day.active}；一天没过完时这个数还会涨）`
         : `今天的消耗：约 ${d.day.burn} kcal（今天没有录入手表数据，按活动水平估算）`,
     );
     lines.push(

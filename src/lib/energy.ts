@@ -1,7 +1,7 @@
-import type { ActivityKind } from "@/db/schema";
 import { KCAL_PER_KG, type Energy } from "./goals";
 
-export type ActivityEntry = { kcal: number; kind: ActivityKind };
+/** 手表记录的运动消耗，不含基础代谢 */
+export type ActivityEntry = { kcal: number };
 
 export type DayBurn = {
   /** 当天总消耗 */
@@ -15,15 +15,12 @@ export type DayBurn = {
 
 /**
  * 某一天消耗了多少热量。
- * 录入了手表数据就用手表的：活动消耗 + 基础代谢，或直接用全天总消耗；
+ * 录入了手表数据就用手表的：基础代谢 + 运动消耗；
  * 没录入则退回到 基础代谢 × 活动系数。
  */
 export function dayBurn(energy: Energy, activity: ActivityEntry | null): DayBurn {
   if (!activity) return { burn: energy.tdee, bmr: energy.bmr, active: energy.tdee - energy.bmr, source: "estimate" };
-  if (activity.kind === "active") return { burn: energy.bmr + activity.kcal, bmr: energy.bmr, active: activity.kcal, source: "watch" };
-  // 全天总消耗不可能低于基础代谢；低于时多半是一天还没过完，先按基础代谢算
-  const burn = Math.max(activity.kcal, energy.bmr);
-  return { burn, bmr: energy.bmr, active: burn - energy.bmr, source: "watch" };
+  return { burn: energy.bmr + activity.kcal, bmr: energy.bmr, active: activity.kcal, source: "watch" };
 }
 
 export type Tier = { key: "surplus" | "even" | "small" | "steady" | "strong" | "too_much"; label: string; message: string };

@@ -1,9 +1,6 @@
-import { ChatView } from "@/components/ChatView";
-import { requireUser } from "@/lib/session";
-import { listChatMessages } from "@/services/assistant";
+import { redirect } from "next/navigation";
 
-export default async function ChatPage() {
-  const user = await requireUser();
-  const messages = listChatMessages(user).map(({ id, role, content }) => ({ id, role, content }));
-  return <ChatView initial={messages} />;
+/** 旧的「问 AI」入口：已由 7 天复盘取代，保留这个地址是为了不让旧书签失效 */
+export default function ChatPage() {
+  redirect("/review");
 }

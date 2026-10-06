@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, ChartNoAxesColumn, House, MessageCircle, UserRound, type LucideIcon } from "lucide-react";
+import { Camera, ChartNoAxesColumn, ClipboardCheck, House, UserRound, type LucideIcon } from "lucide-react";
 import { useCapture } from "./CaptureProvider";
 
 type Tab = { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean };
@@ -12,7 +12,7 @@ const LEFT: Tab[] = [
   { href: "/trends", label: "趋势", icon: ChartNoAxesColumn, match: (p) => p.startsWith("/trends") },
 ];
 const RIGHT: Tab[] = [
-  { href: "/chat", label: "问 AI", icon: MessageCircle, match: (p) => p.startsWith("/chat") },
+  { href: "/review", label: "复盘", icon: ClipboardCheck, match: (p) => p.startsWith("/review") },
   { href: "/settings", label: "我的", icon: UserRound, match: (p) => p.startsWith("/settings") },
 ];
 

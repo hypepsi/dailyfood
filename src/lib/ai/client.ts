@@ -28,6 +28,10 @@ type CallOptions = {
   instructions: string;
   input: AiMessage[];
   maxOutputTokens?: number;
+  /** 思考深度。日常识别用 low 求快；需要综合分析的任务用 medium */
+  effort?: "low" | "medium" | "high";
+  /** 单次请求的超时（毫秒），慢任务可以放宽 */
+  timeoutMs?: number;
   /** 传入则要求模型严格按该 JSON Schema 输出 */
   jsonSchema?: { name: string; schema: Record<string, unknown> };
 };
@@ -49,17 +53,20 @@ export async function callModel(options: CallOptions): Promise<string> {
   const model = env.openaiModel;
   const started = Date.now();
   try {
-    const response = await getClient().responses.create({
+    const response = await getClient().responses.create(
+      {
       model,
       store: false,
-      reasoning: { effort: "low" },
+      reasoning: { effort: options.effort ?? "low" },
       instructions: options.instructions,
       input: options.input as OpenAI.Responses.ResponseInput,
       max_output_tokens: options.maxOutputTokens ?? 2000,
       ...(options.jsonSchema
         ? { text: { format: { type: "json_schema", strict: true, ...options.jsonSchema } } }
         : {}),
-    });
+      },
+      options.timeoutMs ? { timeout: options.timeoutMs, maxRetries: 0 } : undefined,
+    );
     const durationMs = Date.now() - started;
     getDb()
       .insert(schema.aiUsage)

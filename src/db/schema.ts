@@ -147,6 +147,25 @@ export const activityLogs = sqliteTable(
   (t) => [uniqueIndex("activity_logs_user_date_idx").on(t.userId, t.localDate)],
 );
 
+/** 7 天复盘：每个时间窗口保留最后一次生成的结果 */
+export const weeklyReviews = sqliteTable(
+  "weekly_reviews",
+  {
+    id: id(),
+    userId: userId(),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    /** 生成时所用数据的哈希；数据没变就不重复调用模型 */
+    dataHash: text("data_hash").notNull(),
+    /** 模型输出（JSON，已经过程序校验） */
+    content: text("content").notNull(),
+    model: text("model").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("weekly_reviews_user_end_idx").on(t.userId, t.endDate)],
+);
+
+/** 旧的聊天功能已由 7 天复盘取代；表保留是为了不删除历史数据 */
 export const chatMessages = sqliteTable(
   "chat_messages",
   {

@@ -1,45 +1,11 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { User } from "@/db/schema";
-import { answerChat, writeDailyAdvice } from "@/lib/ai/advisor";
+import { writeDailyAdvice } from "@/lib/ai/advisor";
 import { buildSnapshot } from "./snapshot";
 
-const { chatMessages, dailyAdvice } = schema;
-
-/** 带入模型的历史轮数：只为了让对话连贯，饮食数据一律来自快照 */
-const HISTORY_FOR_MODEL = 10;
-
-export function listChatMessages(user: User, limit = 60, beforeId?: number) {
-  return getDb()
-    .select({ id: chatMessages.id, role: chatMessages.role, content: chatMessages.content, createdAt: chatMessages.createdAt })
-    .from(chatMessages)
-    .where(and(eq(chatMessages.userId, user.id), beforeId ? lt(chatMessages.id, beforeId) : undefined))
-    .orderBy(desc(chatMessages.id))
-    .limit(limit)
-    .all()
-    .reverse();
-}
-
-export async function sendChatMessage(user: User, message: string) {
-  const db = getDb();
-  const history = listChatMessages(user, HISTORY_FOR_MODEL).map(({ role, content }) => ({ role, content }));
-  const snapshot = buildSnapshot(user);
-  const reply = await answerChat(user, snapshot, history, message);
-  const now = Date.now();
-  return db.transaction((tx) => {
-    tx.insert(chatMessages).values({ userId: user.id, role: "user", content: message, createdAt: now }).run();
-    return tx
-      .insert(chatMessages)
-      .values({ userId: user.id, role: "assistant", content: reply, createdAt: now + 1 })
-      .returning({ id: chatMessages.id, role: chatMessages.role, content: chatMessages.content, createdAt: chatMessages.createdAt })
-      .get();
-  });
-}
-
-export function clearChat(user: User) {
-  getDb().delete(chatMessages).where(eq(chatMessages.userId, user.id)).run();
-}
+const { dailyAdvice } = schema;
 
 /**
  * 今日简短建议。只在今天有已确认的饮食时生成；

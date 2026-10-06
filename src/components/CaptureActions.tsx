@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Images, MessageCircle, Mic, PencilLine, Scale } from "lucide-react";
+import { Camera, ClipboardCheck, Images, Mic, PencilLine, Scale } from "lucide-react";
 import { useCapture } from "./CaptureProvider";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   isToday: boolean;
 };
 
-/** 页面底部的操作区：拍一顿、语音、相册、身体数据、手动记录、问 AI */
+/** 页面底部的操作区：拍一顿、语音、相册、身体数据、手动记录、7 天复盘 */
 export function CaptureActions({ date, isToday }: Props) {
   const capture = useCapture();
   const target = isToday ? undefined : date;
@@ -40,9 +40,9 @@ export function CaptureActions({ date, isToday }: Props) {
           <PencilLine size={16} className="text-accent" />
           手动记录
         </Link>
-        <Link href="/chat" className="btn-secondary">
-          <MessageCircle size={16} className="text-accent" />
-          问 AI
+        <Link href="/review" className="btn-secondary">
+          <ClipboardCheck size={16} className="text-accent" />
+          7 天复盘
         </Link>
       </div>
     </div>

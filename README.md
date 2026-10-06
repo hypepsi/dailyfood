@@ -14,7 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-49%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-54%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -55,14 +55,14 @@
 | **分食** | 提示「看起来像 3 人的量」 | 按人数分摊，只计入你的一份 |
 | **修正** | 把「米饭剩了一半，汤没喝」翻译成比例 | 按比例重算热量 |
 | **身体数据** | 从体脂秤报告截图里**抄**数字 | 范围检查、交叉核对（体重 × 体脂率 ≈ 脂肪量） |
-| **聊天** | 解释、判断、建议 | 先从数据库读出真实数据并算好，再交给 AI |
+| **复盘** | 通读 7 天数据，八个维度逐一判断，给出三条行动 | 先算好全部合计、平均、占比、对比，再交给 AI；不满 7 天不调用 |
 | **目标** | — | 用固定公式推荐，用户点了才采用 |
 
 三条不会被打破的规则：
 
 1. **AI 的估算不直接入账。** 先存为草稿，你确认后才计入当天。
 2. **统计只认你确认的数字。** AI 原始估算只留档备查。
-3. **AI 不许凭记忆说话。** 聊天里提到但没记录的食物，一律不算数。
+3. **AI 不许凭空补充。** 系统数据里没有的，就是没有。
 
 <br>
 
@@ -99,8 +99,8 @@
 ### 📈 趋势
 7 日平均体重（而不是今天比昨天）、每日摄入、每日热量差（吃超的日子向下画）、体脂、腰围。7 / 30 / 90 天 / 全部。
 
-### 💬 问 AI
-「今天还能吃多少？」「这周为什么没掉秤？」—— 回答基于数据库里的真实记录。
+### 📋 7 天复盘
+连续 7 天都有记录才能用。AI 通读这一周的全部数据，从热量、蛋白质、热量差、饮食结构、进餐规律、体重、运动、记录质量八个维度逐一判断，给出下周要做的三件事。
 
 </td>
 </tr>
@@ -271,7 +271,7 @@ erDiagram
     users ||--o{ body_metrics : ""
     users ||--o{ activity_logs : ""
     users ||--o{ goal_history : ""
-    users ||--o{ chat_messages : ""
+    users ||--o{ weekly_reviews : ""
     users ||--o{ daily_advice : ""
     users ||--o{ ai_usage : ""
     users ||--o{ sessions : ""
@@ -338,7 +338,7 @@ src/
 │   │   ├── meal/new/           手动记录
 │   │   ├── weight/             身体数据
 │   │   ├── trends/             趋势
-│   │   ├── chat/               问 AI
+│   │   ├── review/             7 天复盘
 │   │   └── settings/           目标与资料
 │   └── api/                  所有接口，统一经过 lib/http.ts
 ├── components/               界面组件
@@ -348,7 +348,8 @@ src/
 │   ├── activity.ts             手表运动消耗
 │   ├── profile.ts              资料与目标历史
 │   ├── snapshot.ts             交给 AI 的数据快照 + 热量差汇总
-│   └── assistant.ts            聊天与每日建议
+│   ├── review.ts               7 天复盘：窗口规则、数据整理、缓存
+│   └── assistant.ts            每日建议
 ├── lib/                      纯计算与通用工具
 │   ├── nutrition.ts · energy.ts · goals.ts · weight.ts · time.ts
 │   ├── auth.ts · http.ts · images.ts · storage.ts · logger.ts
@@ -358,13 +359,14 @@ src/
 │       ├── analyze-meal.ts     识别食物
 │       ├── adjust-meal.ts      理解「没吃完」
 │       ├── read-body-report.ts 读体脂秤报告
-│       └── advisor.ts          聊天与建议
+│       ├── review.ts           7 天复盘
+│       └── advisor.ts          每日建议
 └── db/schema.ts              表结构（唯一来源）
 
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        8 个测试文件，49 个用例
+tests/        9 个测试文件，54 个用例
 docs/         README 用的截图
 ```
 
@@ -385,7 +387,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 49 个测试
+npm test             # 54 个测试
 npm run typecheck    # 类型检查
 ```
 
@@ -394,7 +396,7 @@ npm run typecheck    # 类型检查
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `OPENAI_API_KEY` | — | **必填**。只在服务端使用，不会进入前端代码 |
-| `OPENAI_MODEL` | `gpt-6-astra` | 识图、聊天、理解修正用的模型 |
+| `OPENAI_MODEL` | `gpt-6-astra` | 识图、理解修正、每日建议、复盘用的模型 |
 | `OPENAI_TRANSCRIBE_MODEL` | `gpt-4o-transcribe` | 语音转文字 |
 | `DATA_DIR` | `./data` | 数据库、图片、备份都在这里 |
 | `APP_ORIGIN` | — | 对外地址，如 `https://lw.example.com`，用于校验请求来源 |
@@ -511,14 +513,13 @@ systemctl start loseweight
 3. 需要结构化结果的地方一律用 JSON Schema 严格模式，输出再经程序校验
 4. 改了识别类提示词要升版本号 —— 版本号随 AI 原始估算一起存档
 
-现有五份提示词：识别食物、理解修正、读体脂秤报告、聊天、每日建议。
+现有五份提示词：识别食物、理解修正、读体脂秤报告、每日建议、7 天复盘。
 
 <br>
 
 ## 🗺️ 还没做的
 
 - [ ] 根据 14 天真实减重速度，主动建议调整目标
-- [ ] 聊天逐字输出
 - [ ] 异地备份
 - [ ] 离线可用
 

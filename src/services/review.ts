@@ -31,14 +31,12 @@ export type ReviewWindow = {
 };
 
 /**
- * 复盘窗口：以“最近一个已经吃完的日子”结尾的连续 7 天。
- * 今天吃完了（记了晚餐或过了 22 点）就含今天，否则到昨天为止。
+ * 分析窗口：最近 7 个完整的自然日，到昨天为止，不含今天。
+ * 今天还没过完，算进来会让平均值和热量差失真。
  */
 export function getReviewWindow(user: User, now = Date.now()): ReviewWindow {
   const today = localParts(now, user.timezone).date;
-  const summary = getDeficitSummary(user, today, now);
-  const todayCounts = summary ? summary.settled && summary.hasRecords : false;
-  const end = todayCounts ? today : addDays(today, -1);
+  const end = addDays(today, -1);
   const start = addDays(end, -(REVIEW_DAYS - 1));
   const days = dateRange(start, end).map((date) => ({ date, logged: getConfirmedMeals(user, date).length > 0 }));
   const loggedDays = days.filter((d) => d.logged).length;
@@ -207,7 +205,7 @@ export function listPastReviews(user: User, beforeEnd: string, limit = 12): Stor
 export async function generateReview(user: User, now = Date.now()): Promise<StoredReview> {
   const window = getReviewWindow(user, now);
   if (!window.ready) {
-    throw new AppError(409, "not_enough_data", `需要连续 ${REVIEW_DAYS} 天都有饮食记录才能复盘，目前 ${window.loggedDays} / ${REVIEW_DAYS} 天`);
+    throw new AppError(409, "not_enough_data", `最近 ${REVIEW_DAYS} 天都有饮食记录才能生成分析，目前 ${window.loggedDays} / ${REVIEW_DAYS} 天`);
   }
   const data = renderReviewData(user, window, now);
   const dataHash = hashOf(data);

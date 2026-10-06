@@ -42,7 +42,7 @@ export function CaptureActions({ date, isToday }: Props) {
         </Link>
         <Link href="/review" className="btn-secondary">
           <ClipboardCheck size={16} className="text-accent" />
-          7 天复盘
+          AI 分析
         </Link>
       </div>
     </div>

@@ -44,7 +44,7 @@ describe("复盘窗口与数据", () => {
     addMetric(user, { date: "2026-09-29", weightKg: 89.5, bodyFatPct: 26.6, waistCm: null, muscleKg: null, skeletalMuscleKg: null, visceralFat: null, bmrKcal: 1789, note: null });
   });
 
-  it("今天没吃完时窗口到昨天为止；缺一天就不能复盘，并且不会调用模型", async () => {
+  it("窗口是到昨天为止的 7 天；缺一天就不能生成，并且不会调用模型", async () => {
     for (let i = 1; i <= 7; i++) if (i !== 3) eat(addDays("2026-10-06", -i), 1800);
     const w = getReviewWindow(user, NOW);
     expect([w.start, w.end]).toEqual(["2026-09-29", "2026-10-05"]);
@@ -54,9 +54,9 @@ describe("复盘窗口与数据", () => {
     await expect(generateReview(user, NOW)).rejects.toThrow(AppError);
   });
 
-  it("今天记了晚餐就把今天算进窗口", () => {
+  it("窗口永远到昨天为止，今天即使吃完了也不算", () => {
     eat("2026-10-06", 700, "dinner", "18:30");
-    expect(getReviewWindow(user, NOW).end).toBe("2026-10-06");
+    expect(getReviewWindow(user, NOW).end).toBe("2026-10-05");
   });
 
   it("交给模型的数据由程序算好：平均、供能比、热量差、晚间进食、手表消耗", () => {

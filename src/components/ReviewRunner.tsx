@@ -30,7 +30,7 @@ export function ReviewRunner({ label }: { label: string }) {
         <Sparkles size={20} className={busy ? "animate-pulse" : ""} />
         {busy ? "正在分析这 7 天的数据…" : label}
       </button>
-      {busy && <p className="mt-2 text-center text-[13px] text-muted">大约需要半分钟，请不要离开这个页面</p>}
+      {busy && <p className="mt-2 text-center text-[13px] text-muted">大约需要半分钟到一分钟，请不要离开这个页面</p>}
       {error && <p className="mt-2 text-center text-sm text-warn">{error}</p>}
     </div>
   );

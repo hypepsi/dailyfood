@@ -12,7 +12,7 @@ const LEFT: Tab[] = [
   { href: "/trends", label: "趋势", icon: ChartNoAxesColumn, match: (p) => p.startsWith("/trends") },
 ];
 const RIGHT: Tab[] = [
-  { href: "/review", label: "复盘", icon: ClipboardCheck, match: (p) => p.startsWith("/review") },
+  { href: "/review", label: "AI 分析", icon: ClipboardCheck, match: (p) => p.startsWith("/review") },
   { href: "/settings", label: "我的", icon: UserRound, match: (p) => p.startsWith("/settings") },
 ];
 

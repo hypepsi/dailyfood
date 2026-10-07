@@ -96,22 +96,33 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
       </section>
 
       <section className="card">
-        <h2 className="text-sm font-semibold text-accent">AI 估算风格</h2>
-        <p className="mt-1 text-xs leading-relaxed text-muted">拍照、语音和调整时，遇到看不清的地方往哪边取。看得清的食物三档结果一样。只影响之后的记录。</p>
-        <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-bg p-1">
-          {ESTIMATE_STYLES.map((style) => (
-            <button
-              key={style}
-              type="button"
-              onClick={() => set({ estimateStyle: style })}
-              aria-pressed={v.estimateStyle === style}
-              className={`rounded-xl py-2.5 text-sm transition-colors ${v.estimateStyle === style ? "bg-card font-bold text-accent shadow-card" : "text-muted"}`}
-            >
-              {ESTIMATE_STYLE[style].label}
-            </button>
-          ))}
+        <h2 className="text-sm font-semibold text-accent">照片看不清时，AI 怎么估</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted">
+          油放了多少、碗底有多少饭，这些照片上常常看不出来。选一个你希望的估法。看得清的食物（比如两个鸡蛋、一罐可乐）不受影响，三种结果一样。
+        </p>
+        <div className="mt-3 space-y-2">
+          {ESTIMATE_STYLES.map((style) => {
+            const selected = v.estimateStyle === style;
+            return (
+              <button
+                key={style}
+                type="button"
+                onClick={() => set({ estimateStyle: style })}
+                aria-pressed={selected}
+                className={`flex w-full items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors ${selected ? "border-accent bg-tint" : "border-line bg-bg"}`}
+              >
+                <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${selected ? "border-accent" : "border-faint"}`}>
+                  {selected && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+                </span>
+                <span>
+                  <span className={`block font-bold ${selected ? "text-accent-deep" : ""}`}>{ESTIMATE_STYLE[style].label}</span>
+                  <span className="mt-0.5 block text-[13px] leading-relaxed text-muted">{ESTIMATE_STYLE[style].hint}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <p className="mt-2.5 text-[13px] leading-relaxed">{ESTIMATE_STYLE[v.estimateStyle].hint}</p>
+        <p className="mt-2.5 text-xs text-muted">只影响之后的记录，已经记下的不会变。</p>
       </section>
 
       <section className="card card-list">

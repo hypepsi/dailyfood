@@ -175,8 +175,8 @@ export const WEEKLY_REVIEW = `${ADVISOR_BASE}
  */
 export const ESTIMATE_STYLE: Record<EstimateStyle, { label: string; hint: string; prompt: string }> = {
   lenient: {
-    label: "偏低",
-    hint: "看不清的油、酱和份量按偏少算。适合自己做饭、少油少盐的人",
+    label: "估少一点",
+    hint: "看不清的油、酱和份量按偏少算。适合自己做饭、吃得清淡的人",
     prompt: `【估算风格：偏低】
 用户平时吃得清淡，希望不要高估。
 - 种类和份量都看得清的食物（数得出个数的鸡蛋、有包装规格的饮料等）照常估算，不要动。
@@ -185,13 +185,13 @@ export const ESTIMATE_STYLE: Record<EstimateStyle, { label: string; hint: string
 - kcal_low 和 kcal_high 仍然如实给出完整的合理范围，不要跟着收窄。`,
   },
   standard: {
-    label: "标准",
-    hint: "按最可能的情况估算",
+    label: "正常估",
+    hint: "看不清的地方按最常见的情况算",
     prompt: "",
   },
   strict: {
-    label: "偏高",
-    hint: "看不清的油、酱和份量按偏多算，给自己留余量。适合常吃外卖和餐馆的人",
+    label: "估多一点",
+    hint: "看不清的油、酱和份量按偏多算。适合常吃外卖餐馆，或减脂时想留点余量的人",
     prompt: `【估算风格：偏高】
 用户在减脂，希望宁可高估也不要低估，给自己留出余量。
 - 种类和份量都看得清的食物（数得出个数的鸡蛋、有包装规格的饮料等）照常估算，不要加码。

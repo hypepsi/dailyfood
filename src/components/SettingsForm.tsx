@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ActivityLevel } from "@/db/schema";
+import { ESTIMATE_STYLES, type ActivityLevel, type EstimateStyle } from "@/db/schema";
+import { ESTIMATE_STYLE } from "@/lib/ai/prompts";
 import { parseNumber, request } from "@/lib/client-api";
 import { ACTIVITY } from "@/lib/goals";
 
@@ -13,6 +14,7 @@ export type ProfileValues = {
   heightCm: number | null;
   timezone: string;
   activityLevel: ActivityLevel;
+  estimateStyle: EstimateStyle;
   calorieTarget: number;
   proteinTargetG: number;
   targetWeightKg: number | null;
@@ -64,6 +66,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
         heightCm: parseNumber(v.heightCm),
         timezone: v.timezone,
         activityLevel: v.activityLevel,
+        estimateStyle: v.estimateStyle,
         calorieTarget: Math.round(calorieTarget),
         proteinTargetG: Math.round(proteinTargetG),
         targetWeightKg: parseNumber(v.targetWeightKg),
@@ -90,6 +93,25 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
             <input className={inputClass} inputMode="decimal" value={v.targetWeightKg} onChange={(e) => set({ targetWeightKg: e.target.value })} />
           </Row>
         </div>
+      </section>
+
+      <section className="card">
+        <h2 className="text-sm font-semibold text-accent">AI 估算风格</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted">拍照、语音和调整时，遇到看不清的地方往哪边取。看得清的食物三档结果一样。只影响之后的记录。</p>
+        <div className="mt-3 grid grid-cols-3 gap-1 rounded-2xl bg-bg p-1">
+          {ESTIMATE_STYLES.map((style) => (
+            <button
+              key={style}
+              type="button"
+              onClick={() => set({ estimateStyle: style })}
+              aria-pressed={v.estimateStyle === style}
+              className={`rounded-xl py-2.5 text-sm transition-colors ${v.estimateStyle === style ? "bg-card font-bold text-accent shadow-card" : "text-muted"}`}
+            >
+              {ESTIMATE_STYLE[style].label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2.5 text-[13px] leading-relaxed">{ESTIMATE_STYLE[v.estimateStyle].hint}</p>
       </section>
 
       <section className="card card-list">

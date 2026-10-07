@@ -14,7 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-56%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-58%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -77,6 +77,9 @@
 - **🎙️ 语音** —— 说一句「中午和朋友吃了一盘西红柿炒鸡蛋、一小碗糙米饭」，自动识别餐次、人数、谁吃的
 - **🖼️ 相册** —— 选一张或一次选多张已有的照片
 - **✍️ 手动** —— 打字描述让 AI 估，或自己逐项填
+
+### 🎚️ 估算风格三档
+偏低 / 标准 / 偏高。只决定「看不清的地方往哪边取」——油、酱、被遮住的主食、份量；看得清的食物（两个鸡蛋、一罐可乐）三档结果一样。
 
 ### 👨‍👩‍👧 多人分食
 中国人吃饭不分餐。选「几个人一起吃」，合吃的菜平均分摊；自己那碗饭标成「我自己的」不分摊。
@@ -367,7 +370,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        9 个测试文件，56 个用例
+tests/        10 个测试文件，58 个用例
 docs/         README 用的截图
 ```
 
@@ -388,7 +391,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 56 个测试
+npm test             # 58 个测试
 npm run typecheck    # 类型检查
 ```
 

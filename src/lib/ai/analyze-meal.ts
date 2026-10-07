@@ -5,7 +5,7 @@ import { log } from "@/lib/logger";
 import { round1 } from "@/lib/nutrition";
 import type { ItemInput } from "@/services/meals";
 import { callModel, type AiContent } from "./client";
-import { MEAL_ANALYSIS } from "./prompts";
+import { MEAL_ANALYSIS, withEstimateStyle } from "./prompts";
 
 const CONFIDENCE = ["high", "medium", "low"] as const;
 
@@ -185,7 +185,7 @@ export async function analyzeMeal(user: User, input: AnalyzeInput): Promise<Meal
   const output = await callModel({
     user,
     kind: "analyze",
-    instructions: MEAL_ANALYSIS,
+    instructions: withEstimateStyle(MEAL_ANALYSIS, user.estimateStyle),
     input: [{ role: "user", content }],
     jsonSchema: { name: "meal_estimate", schema: JSON_SCHEMA },
     maxOutputTokens: 3000,

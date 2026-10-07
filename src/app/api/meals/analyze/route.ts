@@ -45,7 +45,7 @@ export const POST = api({}, async ({ req, user }) => {
       source: stored.length ? "photo" : isFile(audio) ? "voice" : "text",
       title: estimate.title,
       items: estimate.items.map(({ confidence: _c, ...item }) => item),
-      aiEstimate: { text: text || null, answers: [], promptVersion: MEAL_PROMPT_VERSION, estimate },
+      aiEstimate: { text: text || null, answers: [], promptVersion: MEAL_PROMPT_VERSION, style: user.estimateStyle, estimate },
       aiModel: currentModel(),
       images: stored,
       people: estimate.peopleStated,

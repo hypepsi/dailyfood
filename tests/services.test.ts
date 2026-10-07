@@ -112,7 +112,7 @@ describe("饮食记录", () => {
 describe("目标与身体数据", () => {
   it("修改目标不改变过去日子的评价标准", () => {
     db.insert(schema.goalHistory).values({ userId: user.id, effectiveDate: "2026-09-01", calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85, createdAt: 0 }).run();
-    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
+    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", estimateStyle: "standard", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
     expect(goalsForDate(user, "2026-09-15").calorieTarget).toBe(2000);
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1800);
   });
@@ -120,7 +120,7 @@ describe("目标与身体数据", () => {
   it("第一次改目标时保留旧目标：过去的日子不会被新目标重新评价", () => {
     // 从没改过目标的用户（没有任何历史）
     expect(goalsForDate(user, "2026-01-01").calorieTarget).toBe(2000);
-    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", calorieTarget: 1700, proteinTargetG: 150, targetWeightKg: 80 });
+    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", estimateStyle: "standard", calorieTarget: 1700, proteinTargetG: 150, targetWeightKg: 80 });
     expect(goalsForDate(user, "2026-01-01")).toEqual({ calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85 });
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1700);
   });

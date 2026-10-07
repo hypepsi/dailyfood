@@ -10,6 +10,10 @@ const userId = () =>
 export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "active"] as const;
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
 
+/** AI 估算食物时，遇到看不清的地方往哪边取 */
+export const ESTIMATE_STYLES = ["lenient", "standard", "strict"] as const;
+export type EstimateStyle = (typeof ESTIMATE_STYLES)[number];
+
 export const users = sqliteTable("users", {
   id: id(),
   username: text("username").notNull().unique(),
@@ -20,6 +24,7 @@ export const users = sqliteTable("users", {
   heightCm: real("height_cm"),
   timezone: text("timezone").notNull().default("Asia/Shanghai"),
   activityLevel: text("activity_level", { enum: ACTIVITY_LEVELS }).notNull().default("light"),
+  estimateStyle: text("estimate_style", { enum: ESTIMATE_STYLES }).notNull().default("standard"),
   calorieTarget: integer("calorie_target").notNull(),
   proteinTargetG: integer("protein_target_g").notNull(),
   targetWeightKg: real("target_weight_kg"),

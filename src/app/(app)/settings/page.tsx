@@ -18,6 +18,7 @@ export default async function SettingsPage() {
     heightCm: user.heightCm,
     timezone: user.timezone,
     activityLevel: user.activityLevel,
+    estimateStyle: user.estimateStyle,
     calorieTarget: user.calorieTarget,
     proteinTargetG: user.proteinTargetG,
     targetWeightKg: user.targetWeightKg,

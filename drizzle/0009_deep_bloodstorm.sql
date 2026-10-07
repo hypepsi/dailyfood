@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `estimate_style` text DEFAULT 'standard' NOT NULL;

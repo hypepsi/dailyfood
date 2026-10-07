@@ -4,7 +4,7 @@ import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
 import { round1 } from "@/lib/nutrition";
 import { callModel, type AiContent } from "./client";
-import { MEAL_EDIT } from "./prompts";
+import { MEAL_EDIT, withEstimateStyle } from "./prompts";
 
 const ACTIONS = ["update", "add", "remove", "portion"] as const;
 
@@ -145,7 +145,7 @@ export async function editMeal(user: User, items: CurrentItem[], statement: stri
   const output = await callModel({
     user,
     kind: "edit",
-    instructions: MEAL_EDIT,
+    instructions: withEstimateStyle(MEAL_EDIT, user.estimateStyle),
     input: [
       {
         role: "user",

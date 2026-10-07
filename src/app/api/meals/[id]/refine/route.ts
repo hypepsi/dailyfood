@@ -35,6 +35,6 @@ export const POST = api({ body }, async ({ user, body, params }) => {
   replaceDraftEstimate(user, id, {
     title: estimate.title,
     items: estimate.items.map(({ confidence: _c, ...item }) => item),
-    aiEstimate: { text: previous.text ?? null, answers: body.answers, promptVersion: MEAL_PROMPT_VERSION, estimate },
+    aiEstimate: { text: previous.text ?? null, answers: body.answers, promptVersion: MEAL_PROMPT_VERSION, style: user.estimateStyle, estimate },
   });
 });

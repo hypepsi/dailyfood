@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Plus, Sparkles, Trash2 } from "lucide-react";
-import { PortionFix, EATEN_OPTIONS, fractionLabel } from "./PortionFix";
+import { MealAdjust, EATEN_OPTIONS, fractionLabel, type AdjustItem, type AdjustResult } from "./MealAdjust";
+import { MealPhotos } from "./MealPhotos";
 import { MEAL_TYPES, type MealType } from "@/db/schema";
 import { parseNumber, request } from "@/lib/client-api";
 import { MEAL_LABELS, round1 } from "@/lib/nutrition";
@@ -25,6 +26,8 @@ type Props = {
   /** draft=确认 AI 识别结果；edit=修改已确认记录；new=纯手动新建 */
   mode: "draft" | "edit" | "new";
   mealId?: number;
+  /** 这顿饭已有几张照片 */
+  photoCount?: number;
   today: string;
   initial: { mealType: MealType; date: string; time: string; people: number; items: EditorItem[] };
   estimate?: { totalKcal: number; kcalLow: number; kcalHigh: number; note: string; peopleHint?: number; questions: { question: string; options: string[] }[] };
@@ -82,12 +85,14 @@ function snapshotBase(row: Row): Row["base"] {
   return weight && weight > 0 ? { weight, kcal: num(row.kcal), protein: num(row.protein), carbs: num(row.carbs), fat: num(row.fat) } : null;
 }
 
-export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
+export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estimate }: Props) {
   const router = useRouter();
   const [mealType, setMealType] = useState(initial.mealType);
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
   const [people, setPeople] = useState(initial.people);
+  // AI 调整时如果食物种类变了，会顺带给这顿饭起一个新名称
+  const [title, setTitle] = useState("");
   const [rows, setRows] = useState<Row[]>(() => (initial.items.length ? initial.items.map(toRow) : [emptyRow()]));
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<"" | "save" | "refine" | "delete">("");
@@ -116,22 +121,44 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         "/api/meals/estimate-item",
         { name: row.name.trim(), quantity: row.quantity.trim(), weightG: parseNumber(row.weight) },
       );
-      update(row.key, {
-        quantity: item.quantity,
-        weight: str(item.weightG),
-        kcal: String(item.kcal),
-        protein: String(item.proteinG),
-        carbs: String(item.carbsG),
-        fat: String(item.fatG),
-        estimatedFor: row.name.trim(),
-        confidence: undefined,
-        base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
-      });
+      update(row.key, estimated({ ...item, name: row.name.trim() }));
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setEstimating(null);
     }
+  }
+
+  /** 把一样食物的估算结果写进一行：数值、换算基准都更新，并标记“已按这个名称估算过” */
+  function estimated(item: AdjustItem): Partial<Row> {
+    return {
+      name: item.name,
+      quantity: item.quantity,
+      weight: str(item.weightG),
+      kcal: String(item.kcal),
+      protein: String(item.proteinG),
+      carbs: String(item.carbsG),
+      fat: String(item.fatG),
+      estimatedFor: item.name,
+      confidence: undefined,
+      base: item.weightG ? { weight: item.weightG, kcal: item.kcal, protein: item.proteinG, carbs: item.carbsG, fat: item.fatG } : null,
+    };
+  }
+
+  /** 应用“说一句”得到的修改方案：只动 AI 指出的那几行，其余原样保留 */
+  function applyAdjust(result: AdjustResult, rowIndexes: number[]) {
+    setRows((current) => {
+      const rowAt = (index: number) => current[rowIndexes[index]];
+      const patches = new Map<number, Partial<Row>>();
+      for (const u of result.updates) if (rowAt(u.index)) patches.set(rowAt(u.index).key, { ...patches.get(rowAt(u.index).key), ...estimated(u.item) });
+      for (const p of result.portions) if (rowAt(p.index)) patches.set(rowAt(p.index).key, { ...patches.get(rowAt(p.index).key), eaten: p.fraction });
+      const removed = new Set(result.removes.map((i) => rowAt(i)?.key));
+      const kept = current.filter((r) => !removed.has(r.key)).map((r) => (patches.has(r.key) ? { ...r, ...patches.get(r.key) } : r));
+      const added = result.adds.map((item) => ({ ...emptyRow(), open: false, ...estimated(item) }));
+      return [...kept, ...added];
+    });
+    if (result.title) setTitle(result.title);
+    if (result.people) setPeople(result.people);
   }
 
   function update(key: number, patch: Partial<Row>) {
@@ -191,7 +218,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
 
     setBusy("save");
     try {
-      const payload = { mealType, date, time, people, items };
+      const payload = { mealType, date, time, people, title, items };
       if (mode === "new") await request("POST", "/api/meals", payload);
       else await request("PUT", `/api/meals/${mealId}`, payload);
       router.push(date === today ? "/" : `/day/${date}`);
@@ -230,10 +257,15 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
     }
   }
 
+  // 交给 AI 对照用的当前清单（语音/文字调整、补拍照片都用它）
+  const currentItems = rows.map((r) => ({ name: r.name, quantity: r.quantity, weightG: parseNumber(r.weight), kcal: num(r.kcal), proteinG: num(r.protein), carbsG: num(r.carbs), fatG: num(r.fat), eaten: r.eaten }));
+
   const questions = mode === "draft" ? (estimate?.questions ?? []) : [];
 
   return (
     <div className="space-y-3 pb-24">
+      {mode !== "new" && mealId !== undefined && <MealPhotos mealId={mealId} initialCount={photoCount} items={currentItems} onResult={applyAdjust} />}
+
       {estimate && (
         <section className="card-tint">
           <div className="text-sm opacity-80">AI 估算{hint > 1 ? "（整桌）" : ""}</div>
@@ -274,11 +306,13 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
         </section>
       )}
 
-      {mode === "edit" && mealId !== undefined && (
-        <PortionFix
+      {mode !== "new" && mealId !== undefined && (
+        <MealAdjust
           mealId={mealId}
-          items={rows.map((r) => ({ name: r.name, quantity: r.quantity, eaten: r.eaten }))}
-          onApply={(fractions) => setRows((rs) => rs.map((r, i) => (fractions[i] === null || fractions[i] === undefined ? r : { ...r, eaten: fractions[i] as number })))}
+          mode={mode}
+          items={currentItems}
+          onResult={applyAdjust}
+          onPortions={(fractions) => setRows((rs) => rs.map((r, i) => (fractions[i] === null || fractions[i] === undefined ? r : { ...r, eaten: fractions[i] as number })))}
         />
       )}
 

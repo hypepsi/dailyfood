@@ -14,7 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-58%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-56%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -53,7 +53,7 @@
 |---|---|---|
 | **记录** | 认出照片里的每样食物，估份量和营养 | 合计总热量、校验 AI 结果是否自相矛盾 |
 | **分食** | 提示「看起来像 3 人的量」 | 按人数分摊，只计入你的一份 |
-| **修正** | 把「米饭剩了一半，汤没喝」翻译成比例 | 按比例重算热量 |
+| **调整** | 把「面条是乌冬面」「米饭剩了一半」变成对清单的精确修改，只重估被改的那一样 | 校验方案、应用到对应的行、按比例重算热量 |
 | **身体数据** | 从体脂秤报告截图里**抄**数字 | 范围检查、交叉核对（体重 × 体脂率 ≈ 脂肪量） |
 | **复盘** | 通读 7 天数据，八个维度逐一判断，给出三条行动 | 先算好全部合计、平均、占比、对比，再交给 AI；不满 7 天不调用 |
 | **目标** | — | 用固定公式推荐，用户点了才采用 |
@@ -73,19 +73,16 @@
 <td width="50%" valign="top">
 
 ### 🍱 记一顿饭 —— 四种方式
-- **📷 拍照** —— 底部导航正中间的相机按钮，任何页面一点即拍
+- **📷 拍照** —— 底部导航正中间的相机按钮，任何页面一点即拍；一张不够可以在确认页再补，最多 4 张，同一样食物不会重复计算
 - **🎙️ 语音** —— 说一句「中午和朋友吃了一盘西红柿炒鸡蛋、一小碗糙米饭」，自动识别餐次、人数、谁吃的
-- **🖼️ 相册** —— 选一张已有的照片
+- **🖼️ 相册** —— 选一张或一次选多张已有的照片
 - **✍️ 手动** —— 打字描述让 AI 估，或自己逐项填
 
 ### 👨‍👩‍👧 多人分食
 中国人吃饭不分餐。选「几个人一起吃」，合吃的菜平均分摊；自己那碗饭标成「我自己的」不分摊。
 
-### 🔁 认错了就改名重估
-AI 把菜认错了？改掉名称，点「按新名称重新估算」，这一样的热量和营养素会按新名称重算，其他食物不动。
-
-### ✏️ 吃完再修正
-没吃完？点「主食剩一半」「整体吃了一半」，或者直接说一句话。原始份量保留，随时能改回去。
+### 🗣️ 不对就说一句
+识别完发现不对，不用等记录以后再改：在确认页直接说一句或写一句，例如「面条是乌冬面」「没有卤蛋，还喝了一罐可乐」。AI 只改你提到的那一样并重新估算，其余不动。已经记录的饭同样可以这样改；没吃完也可以说「米饭剩了一半」，或点「主食剩一半」这类快捷按钮。也可以手动改名称后点「按新名称重新估算」。
 
 </td>
 <td width="50%" valign="top">
@@ -169,23 +166,6 @@ AI 每次返回的内容：每样食物的名称、数量、重量、热量、�
 | 没有录入 | 基础代谢 × 活动系数（1.2 / 1.375 / 1.55 / 1.725） |
 
 基础代谢优先用体脂秤实测值；没有则用 Mifflin-St Jeor 公式估算。
-
-</details>
-
-<details open>
-<summary><b>当天的热量目标</b></summary>
-
-用户设的目标隐含一个「计划热量差」= 按活动水平估算的消耗 − 目标。
-
-```
-录入了手表数据，且当天消耗高于估算：
-    当天目标 = 基础代谢 + 运动消耗 − 计划热量差      （取整到 10）
-其他情况：
-    当天目标 = 用户设的目标
-```
-
-只上调、不下调。这样运动多的日子可以多吃，热量差保持在计划的水平，而不是运动越多缺口越大。
-首页的剩余热量、趋势页的「未超目标」、7 日分析都按当天实际的目标评价。
 
 </details>
 
@@ -296,6 +276,7 @@ erDiagram
     users ||--o{ ai_usage : ""
     users ||--o{ sessions : ""
     meals ||--|{ meal_items : ""
+    meals ||--o{ meal_images : ""
 
     users {
         text username
@@ -377,7 +358,7 @@ src/
 │       ├── prompts.ts          ⭐ 全部提示词集中在这里
 │       ├── client.ts           模型调用唯一出口（限额、超时、用量、错误转换）
 │       ├── analyze-meal.ts     识别食物
-│       ├── adjust-meal.ts      理解「没吃完」
+│       ├── edit-meal.ts        按一句话修改一顿饭
 │       ├── read-body-report.ts 读体脂秤报告
 │       ├── review.ts           7 天复盘
 │       └── advisor.ts          每日建议
@@ -386,7 +367,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        9 个测试文件，58 个用例
+tests/        9 个测试文件，56 个用例
 docs/         README 用的截图
 ```
 
@@ -407,7 +388,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 58 个测试
+npm test             # 56 个测试
 npm run typecheck    # 类型检查
 ```
 
@@ -533,7 +514,7 @@ systemctl start loseweight
 3. 需要结构化结果的地方一律用 JSON Schema 严格模式，输出再经程序校验
 4. 改了识别类提示词要升版本号 —— 版本号随 AI 原始估算一起存档
 
-现有五份提示词：识别食物、理解修正、读体脂秤报告、每日建议、7 天复盘。
+现有五份提示词：识别食物、按一句话修改、读体脂秤报告、每日建议、7 天复盘。识别和修改共用同一段估算规则。
 
 <br>
 

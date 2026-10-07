@@ -50,10 +50,6 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <PageHeader title={isDraft ? "确认这顿饭" : "修改记录"} backHref={meal.localDate === today ? "/" : `/day/${meal.localDate}`} />
-      {meal.thumbPath && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/api/meals/${meal.id}/image`} alt="食物照片" className="mb-3 max-h-48 w-full rounded-3xl object-cover" />
-      )}
       {described && (
         <p className="mb-3 rounded-2xl border border-line bg-card px-4 py-3 text-sm leading-relaxed text-muted">
           <span className="text-faint">{meal.source === "voice" ? "听到的是：" : "你的描述："}</span>
@@ -64,6 +60,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
         key={meal.updatedAt}
         mode={isDraft ? "draft" : "edit"}
         mealId={meal.id}
+        photoCount={meal.photoCount}
         today={today}
         initial={{ mealType: meal.mealType, date: meal.localDate, time: localParts(meal.eatenAt, user.timezone).time, people: meal.sharePeople, items }}
         estimate={

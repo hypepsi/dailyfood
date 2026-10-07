@@ -57,6 +57,13 @@
       "when": 1791291374599,
       "tag": "0007_giant_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791347946352,
+      "tag": "0008_concerned_queen_noir",
+      "breakpoints": true
     }
   ]
 }

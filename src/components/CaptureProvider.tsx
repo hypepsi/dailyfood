@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MealType } from "@/db/schema";
+import { MAX_MEAL_PHOTOS, type MealType } from "@/db/schema";
 import { request } from "@/lib/client-api";
 import { compressImage } from "@/lib/compress-image";
 import { MEAL_LABELS } from "@/lib/nutrition";
@@ -36,6 +36,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [photoCount, setPhotoCount] = useState(1);
   const [voice, setVoice] = useState<{ date?: string; mealType?: MealType } | null>(null);
   const closeVoice = useCallback(() => setVoice(null), []);
   const analyzeVoice = useCallback(
@@ -59,14 +60,17 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     setBusy(false);
   }
 
-  async function handleFile(file: File | undefined) {
-    if (!file) return;
+  async function handleFiles(list: FileList | null) {
+    const files = Array.from(list ?? []).slice(0, MAX_MEAL_PHOTOS);
+    if (files.length === 0) return;
+    const file = files[0];
+    setPhotoCount(files.length);
     setError("");
     setBusy(true);
     setPreview(URL.createObjectURL(file));
     try {
       const form = new FormData();
-      form.append("image", await compressImage(file), "meal.jpg");
+      for (const f of files) form.append("image", await compressImage(f), "meal.jpg");
       if (targetDate.current) form.append("date", targetDate.current);
       const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form);
       router.push(`/meal/${id}`);
@@ -78,7 +82,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   }
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    void handleFile(e.target.files?.[0]);
+    void handleFiles(e.target.files);
     e.target.value = "";
   };
 
@@ -92,7 +96,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     <CaptureContext.Provider value={capture}>
       {children}
       <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} data-capture="camera" />
-      <input ref={albumInput} type="file" accept="image/*" hidden onChange={onChange} data-capture="album" />
+      <input ref={albumInput} type="file" accept="image/*" multiple hidden onChange={onChange} data-capture="album" />
 
       {voice && <VoiceOverlay
           title={`正在听，说说${voice.mealType ? MEAL_LABELS[voice.mealType] : ""}吃了什么`}
@@ -105,7 +109,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={preview} alt="" className={`max-h-[50dvh] rounded-3xl object-contain ${busy ? "animate-pulse" : ""}`} />
           {busy ? (
-            <p className="text-lg">正在识别食物…</p>
+            <p className="text-lg">{photoCount > 1 ? `正在识别 ${photoCount} 张照片…` : "正在识别食物…"}</p>
           ) : (
             <>
               <p className="text-center text-lg">{error}</p>

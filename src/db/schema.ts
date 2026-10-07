@@ -70,8 +70,6 @@ export const meals = sqliteTable(
     title: text("title").notNull().default(""),
     /** 几个人一起吃。明细按整桌保存，计入统计时除以人数 */
     sharePeople: integer("share_people").notNull().default(1),
-    imagePath: text("image_path"),
-    thumbPath: text("thumb_path"),
     /** AI 原始估算（JSON），只留档追溯，统计不读它 */
     aiEstimate: text("ai_estimate"),
     aiModel: text("ai_model"),
@@ -80,6 +78,25 @@ export const meals = sqliteTable(
     confirmedAt: integer("confirmed_at"),
   },
   (t) => [index("meals_user_date_idx").on(t.userId, t.localDate, t.status)],
+);
+
+/** 一顿饭可以有多张照片（不同角度、分开摆的几样菜），最多 MAX_MEAL_PHOTOS 张 */
+export const MAX_MEAL_PHOTOS = 4;
+
+export const mealImages = sqliteTable(
+  "meal_images",
+  {
+    id: id(),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    /** 原图；超过保留期后会被清掉，只留缩略图 */
+    imagePath: text("image_path"),
+    thumbPath: text("thumb_path").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("meal_images_meal_idx").on(t.mealId, t.position)],
 );
 
 /** 用户最终确认的食物明细，所有统计只读这张表 */

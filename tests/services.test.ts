@@ -91,6 +91,16 @@ describe("饮食记录", () => {
     expect(getDailyTotals(user, DATE, DATE)[0].kcal).toBe(166);
   });
 
+  it("名称跟着内容走：食物没变时保留原名，改了食物就换名称", () => {
+    const id = createDraft(user, { source: "photo", title: "肉片炖粗面", items: [{ ...egg, name: "粗面" }], aiEstimate: {}, aiModel: "t", date: DATE });
+    saveMeal(user, id, { ...meal(500), items: [{ ...egg, name: "粗面", kcal: 500 }] });
+    expect(getMeal(user, id).title).toBe("肉片炖粗面"); // 只改了热量
+    saveMeal(user, id, { ...meal(500), items: [{ ...egg, name: "乌冬面寿喜锅", kcal: 720 }] });
+    expect(getMeal(user, id).title).toBe("乌冬面寿喜锅"); // 改了食物，没给新名称 → 用食物名
+    saveMeal(user, id, { ...meal(500), title: "寿喜乌冬", items: [{ ...egg, name: "乌冬面", kcal: 700 }] });
+    expect(getMeal(user, id).title).toBe("寿喜乌冬"); // 给了新名称就用它
+  });
+
   it("用户之间的数据互相不可见", () => {
     const id = createManualMeal(user, meal(700));
     expect(() => getMeal(other, id)).toThrow(AppError);

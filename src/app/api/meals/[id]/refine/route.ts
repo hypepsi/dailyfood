@@ -4,7 +4,7 @@ import { MEAL_PROMPT_VERSION } from "@/lib/ai/prompts";
 import { AppError } from "@/lib/errors";
 import { api, idParam } from "@/lib/http";
 import { storage } from "@/lib/storage";
-import { getMealRow, replaceDraftEstimate } from "@/services/meals";
+import { getMealImages, getMealRow, replaceDraftEstimate } from "@/services/meals";
 
 export const maxDuration = 90;
 
@@ -22,9 +22,11 @@ export const POST = api({ body }, async ({ user, body, params }) => {
   if (meal.status !== "draft") throw new AppError(409, "not_draft", "这顿饭已经确认，无法重新识别");
 
   const previous = JSON.parse(meal.aiEstimate ?? "{}") as { text?: string | null };
-  const image = meal.imagePath ? await storage.read(meal.imagePath) : null;
+  // 追问时把这顿饭的所有照片都再给模型看一遍
+  const stored = await Promise.all(getMealImages(id).map((i) => (i.imagePath ? storage.read(i.imagePath) : null)));
+  const images = stored.filter((b): b is Buffer => b !== null);
   const estimate = await analyzeMeal(user, {
-    image: image ?? undefined,
+    images,
     text: previous.text ?? undefined,
     answers: body.answers,
   });

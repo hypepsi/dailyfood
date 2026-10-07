@@ -96,19 +96,12 @@ export function DayView({ user, date, today }: { user: User; date: string; today
           value={Math.abs(day.kcalRemaining).toLocaleString("en-US")}
           unit="kcal"
           tone={over ? "warn" : "accent"}
-          sub={
-            day.activityBonus > 0 ? (
-              <>
-                {isToday ? "今天" : "当天"}运动多，目标由 {day.baseCalorieTarget} 上调到 <b className="text-ink">{goals.calorieTarget}</b>
-              </>
-            ) : undefined
-          }
         />
         <ProgressBar value={totals.kcal} max={goals.calorieTarget} over={over} />
         <StatRow
           stats={[
             { label: "已摄入", value: `${totals.kcal}` },
-            { label: day.activityBonus > 0 ? "今日目标" : "目标", value: `${goals.calorieTarget}` },
+            { label: "目标", value: `${goals.calorieTarget}` },
             { label: "近7天日均", value: weekAvg === null ? "—" : `${weekAvg}` },
           ]}
         />

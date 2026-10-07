@@ -158,8 +158,8 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
 }
 
 export type AnalyzeInput = {
-  /** WebP 图片 */
-  image?: Buffer;
+  /** 同一顿饭的一张或多张照片（WebP） */
+  images?: Buffer[];
   /** 用户的文字描述或补充说明 */
   text?: string;
   /** 对上一轮追问的回答 */
@@ -168,15 +168,13 @@ export type AnalyzeInput = {
 
 export async function analyzeMeal(user: User, input: AnalyzeInput): Promise<MealEstimate> {
   const content: AiContent[] = [];
-  if (input.image) {
-    content.push({
-      type: "input_image",
-      image_url: `data:image/webp;base64,${input.image.toString("base64")}`,
-      detail: "high",
-    });
+  const images = input.images ?? [];
+  for (const image of images) {
+    content.push({ type: "input_image", image_url: `data:image/webp;base64,${image.toString("base64")}`, detail: "high" });
   }
   const textParts: string[] = [];
-  if (input.image) textParts.push("请估算照片里这顿饭。");
+  if (images.length === 1) textParts.push("请估算照片里这顿饭。");
+  if (images.length > 1) textParts.push(`这 ${images.length} 张照片拍的是同一顿饭，请合在一起估算。`);
   if (input.text) textParts.push(`用户描述：${input.text}`);
   if (input.answers?.length) {
     textParts.push("用户对补充问题的回答：");

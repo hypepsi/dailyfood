@@ -34,7 +34,7 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
             {list.map((meal) => (
               <div key={meal.id} className="mt-1.5 flex items-center gap-1.5 lg:mt-2">
                 <Link href={`/meal/${meal.id}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl p-0.5 transition-colors active:bg-bg lg:gap-3 lg:hover:bg-bg">
-                  {meal.thumbPath ? (
+                  {meal.photoCount > 0 ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={`/api/meals/${meal.id}/image?size=thumb`} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover lg:h-14 lg:w-14" />
                   ) : (
@@ -47,6 +47,7 @@ export function MealList({ meals, date, isToday, timezone }: { meals: MealWithIt
                     <span className="num block truncate text-[13px] text-faint">
                       {timeFmt.format(meal.eatenAt)} · 蛋白质 {Math.round(meal.totals.proteinG)} g
                       {meal.sharePeople > 1 && ` · ${meal.sharePeople} 人分食`}
+                      {meal.photoCount > 1 && ` · ${meal.photoCount} 张照片`}
                       {meal.items.some((i) => i.eatenFraction !== 1) && " · 已修正"}
                     </span>
                   </span>

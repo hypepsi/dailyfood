@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
-import { dailyCalorieTarget, dayBurn, deficitTier, fatGrams, loggingStreak } from "@/lib/energy";
+import { dayBurn, deficitTier, fatGrams, loggingStreak } from "@/lib/energy";
 import { addDays } from "@/lib/time";
 import { clearActivity, setActivity } from "@/services/activity";
 import { createManualMeal } from "@/services/meals";
 import { addMetric } from "@/services/metrics";
-import { getDaySummary, getDeficitSummary } from "@/services/snapshot";
+import { getDeficitSummary } from "@/services/snapshot";
 
 const energy = { bmr: 1789, bmrSource: "实测" as const, tdee: 2460 };
 
@@ -16,23 +16,6 @@ describe("每日消耗", () => {
   });
   it("手表的运动消耗要加上基础代谢", () => {
     expect(dayBurn(energy, { kcal: 1086 })).toEqual({ burn: 2875, bmr: 1789, active: 1086, source: "watch" });
-  });
-});
-
-describe("当天的热量目标", () => {
-  // 目标 1950，估算消耗 2460 → 计划热量差 510
-  it("没有手表数据时不调整", () => {
-    expect(dailyCalorieTarget(1950, energy, null)).toEqual({ target: 1950, bonus: 0 });
-  });
-  it("运动多的日子上调，让热量差保持在计划的水平", () => {
-    // 消耗 1789+1050=2839，2839−510=2329 → 取整 2330
-    expect(dailyCalorieTarget(1950, energy, { kcal: 1050 })).toEqual({ target: 2330, bonus: 380 });
-  });
-  it("运动少的日子不下调", () => {
-    expect(dailyCalorieTarget(1950, energy, { kcal: 300 })).toEqual({ target: 1950, bonus: 0 });
-  });
-  it("资料不全算不出消耗时不调整", () => {
-    expect(dailyCalorieTarget(1950, null, { kcal: 1050 })).toEqual({ target: 1950, bonus: 0 });
   });
 });
 
@@ -81,11 +64,7 @@ describe("热量差汇总", () => {
     setActivity(user, { date: TODAY, kcal: 1086 });
     s = getDeficitSummary(user, TODAY, NOW)!;
     expect(s.day).toMatchObject({ burn: 2875, deficit: 1875, source: "watch" });
-    // 目标随运动上调（2000 → 2420），吃满目标后的热量差仍接近计划的 460
-    const day = getDaySummary(user, TODAY, NOW);
-    expect(day).toMatchObject({ baseCalorieTarget: 2000, activityBonus: 420, kcalRemaining: 1420 });
-    expect(day.goals.calorieTarget).toBe(2420);
-    expect(s.deficitAtTarget).toBe(455);
+    expect(s.deficitAtTarget).toBe(875);
 
     setActivity(user, { date: TODAY, kcal: 1200 }); // 同一天再录是更新
     expect(getDeficitSummary(user, TODAY, NOW)!.day.burn).toBe(2989);

@@ -1,6 +1,6 @@
 import type { User } from "@/db/schema";
-import { dailyCalorieTarget, dayBurn, fatGrams, loggingStreak, type ActivityEntry, type DayBurn } from "@/lib/energy";
-import { ACTIVITY, estimateEnergy, type BodyFacts, type Energy } from "@/lib/goals";
+import { dayBurn, fatGrams, loggingStreak, type DayBurn } from "@/lib/energy";
+import { ACTIVITY, estimateEnergy, type BodyFacts } from "@/lib/goals";
 import { MEAL_LABELS, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { addDays, ageOn, localParts } from "@/lib/time";
 import { trendPerWeek, windowAverage } from "@/lib/weight";
@@ -20,36 +20,24 @@ export type WeightStats = {
 
 export type DaySummary = {
   date: string;
-  /** calorieTarget 是当天实际使用的目标（运动多的日子已上调） */
   goals: Goals;
-  /** 用户设的基础目标，以及因为手表运动消耗上调了多少 */
-  baseCalorieTarget: number;
-  activityBonus: number;
   meals: MealWithItems[];
   totals: Nutrients;
   kcalRemaining: number;
   proteinRemaining: number;
 };
 
-/** 某一天实际使用的目标：用户当时设的目标 + 运动多时的上调 */
-export function goalsOn(user: User, date: string, energy: Energy | null, activity: ActivityEntry | null) {
-  const base = goalsForDate(user, date);
-  const { target, bonus } = dailyCalorieTarget(base.calorieTarget, energy, activity);
-  return { goals: { ...base, calorieTarget: target }, baseCalorieTarget: base.calorieTarget, activityBonus: bonus };
-}
-
-export function getDaySummary(user: User, date: string, now = Date.now()): DaySummary {
-  const { energy } = getEnergy(user, localParts(now, user.timezone).date);
-  const effective = goalsOn(user, date, energy, getActivities(user, date, date).get(date) ?? null);
+export function getDaySummary(user: User, date: string): DaySummary {
+  const goals = goalsForDate(user, date);
   const meals = getConfirmedMeals(user, date);
   const totals = sumNutrients(meals.map((m) => m.totals));
   return {
     date,
-    ...effective,
+    goals,
     meals,
     totals,
-    kcalRemaining: effective.goals.calorieTarget - totals.kcal,
-    proteinRemaining: round1(effective.goals.proteinTargetG - totals.proteinG),
+    kcalRemaining: goals.calorieTarget - totals.kcal,
+    proteinRemaining: round1(goals.proteinTargetG - totals.proteinG),
   };
 }
 
@@ -97,8 +85,8 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
   const { energy } = getEnergy(user, local.date);
   if (!energy) return null;
 
+  const goals = goalsForDate(user, date);
   const activities = getActivities(user);
-  const { goals } = goalsOn(user, date, energy, activities.get(date) ?? null);
   const intakeByDate = new Map(getDailyTotals(user, "0000-01-01", local.date).map((d) => [d.date, d.kcal]));
   const dayOf = (d: string): DeficitDay => {
     const burn = dayBurn(energy, activities.get(d) ?? null);
@@ -123,7 +111,7 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
     hasRecords: intakeByDate.has(date),
     /** 这一天算不算“吃完了”：过去的日子、今天 22 点以后、或已经记了晚餐 */
     settled,
-    /** 如果今天正好吃到（已按运动上调的）目标，热量差会是多少 */
+    /** 如果今天正好吃到目标，热量差会是多少 */
     deficitAtTarget: day.burn - goals.calorieTarget,
     week: { days: week.length, total: sum(week) },
     allTime: { days: logged.length, total: sum(logged) },
@@ -141,7 +129,7 @@ export type DeficitSummary = NonNullable<ReturnType<typeof getDeficitSummary>>;
  */
 export function buildSnapshot(user: User, now = Date.now()) {
   const local = localParts(now, user.timezone);
-  const day = getDaySummary(user, local.date, now);
+  const day = getDaySummary(user, local.date);
   const recentDays = getDailyTotals(user, addDays(local.date, -14), addDays(local.date, -1));
   const weight = getWeightStats(user, local.date);
   const waist = getLatest(user, "waistCm");
@@ -185,7 +173,7 @@ export function renderSnapshot(s: Snapshot): string {
       `${fmt(s.profile.age, "岁")}，身高${fmt(s.profile.heightCm, "cm")}`,
   );
   lines.push(
-    `目标：每日热量 ${day.baseCalorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g，目标体重 ${fmt(day.goals.targetWeightKg, "kg")}`,
+    `目标：每日热量 ${day.goals.calorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g，目标体重 ${fmt(day.goals.targetWeightKg, "kg")}`,
   );
   if (s.energy) {
     lines.push(
@@ -199,11 +187,6 @@ export function renderSnapshot(s: Snapshot): string {
         ? `今天的消耗：${d.day.burn} kcal（基础代谢 ${d.day.bmr} + 用户从手表录入的运动消耗 ${d.day.active}；一天没过完时这个数还会涨）`
         : `今天的消耗：约 ${d.day.burn} kcal（今天没有录入手表数据，按活动水平估算）`,
     );
-    if (day.activityBonus > 0) {
-      lines.push(
-        `今天运动消耗高于平时，今日热量目标已由 ${day.baseCalorieTarget} 上调到 ${day.goals.calorieTarget} kcal（+${day.activityBonus}），这样热量差保持在计划的水平。下面的“剩余热量”按上调后的目标计算；建议用户把这部分吃回来，不要硬扛。`,
-      );
-    }
     lines.push(
       d.hasRecords
         ? `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`

@@ -41,13 +41,14 @@ async function expireOriginals() {
   const db = getDb();
   const cutoff = Date.now() - env.imageRetentionDays * 86400_000;
   const expired = db
-    .select({ id: schema.meals.id, imagePath: schema.meals.imagePath })
-    .from(schema.meals)
-    .where(and(eq(schema.meals.status, "confirmed"), isNotNull(schema.meals.imagePath), lt(schema.meals.eatenAt, cutoff)))
+    .select({ id: schema.mealImages.id, imagePath: schema.mealImages.imagePath })
+    .from(schema.mealImages)
+    .innerJoin(schema.meals, eq(schema.meals.id, schema.mealImages.mealId))
+    .where(and(eq(schema.meals.status, "confirmed"), isNotNull(schema.mealImages.imagePath), lt(schema.meals.eatenAt, cutoff)))
     .all();
-  for (const meal of expired) {
-    await removeImages(meal.imagePath);
-    db.update(schema.meals).set({ imagePath: null }).where(eq(schema.meals.id, meal.id)).run();
+  for (const image of expired) {
+    await removeImages(image.imagePath);
+    db.update(schema.mealImages).set({ imagePath: null }).where(eq(schema.mealImages.id, image.id)).run();
   }
   log.info("original images expired", { count: expired.length, retentionDays: env.imageRetentionDays });
 }

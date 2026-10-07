@@ -1,13 +1,13 @@
 import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
-import { MEAL_TYPES, type Meal, type MealItem, type MealType, type User } from "@/db/schema";
+import { MAX_MEAL_PHOTOS, MEAL_TYPES, type Meal, type MealItem, type MealType, type User } from "@/db/schema";
 import { AppError, badRequest, notFound } from "@/lib/errors";
-import { removeImages } from "@/lib/images";
+import { removeImages, type StoredImage } from "@/lib/images";
 import { guessMealType, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { isDateString, isTimeString, localDate, localParts, zonedToUtc } from "@/lib/time";
 
-const { meals, mealItems } = schema;
+const { meals, mealItems, mealImages } = schema;
 
 const grams = z.number().min(0).max(1000);
 
@@ -35,18 +35,18 @@ export const mealInput = z.object({
 });
 export type MealInput = z.infer<typeof mealInput>;
 
-export type MealWithItems = Meal & { items: MealItem[]; totals: Nutrients };
+export type MealWithItems = Meal & { items: MealItem[]; totals: Nutrients; photoCount: number };
 
 /**
  * 明细保存的是原始份量。计入统计的量由程序计算：
  * × 实际吃掉的比例（修正），合吃的项目再 ÷ 人数，自己单独吃的项目不分摊。
  */
-function withTotals(meal: Meal, items: MealItem[]): MealWithItems {
+function withTotals(meal: Meal, items: MealItem[], photoCount: number): MealWithItems {
   const mine = items.map((i) => {
     const share = i.eatenFraction * (i.personal ? 1 : 1 / meal.sharePeople);
     return { kcal: i.kcal * share, proteinG: i.proteinG * share, carbsG: i.carbsG * share, fatG: i.fatG * share };
   });
-  return { ...meal, items, totals: sumNutrients(mine) };
+  return { ...meal, items, totals: sumNutrients(mine), photoCount };
 }
 
 function replaceItems(tx: Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0], mealId: number, items: ItemInput[]) {
@@ -77,8 +77,8 @@ export function createDraft(
     items: ItemInput[];
     aiEstimate: unknown;
     aiModel: string;
-    imagePath?: string;
-    thumbPath?: string;
+    /** 这顿饭的照片，按拍摄顺序 */
+    images?: Pick<StoredImage, "imagePath" | "thumbPath">[];
     /** 补记过去某天时指定日期 */
     date?: string;
   },
@@ -101,8 +101,6 @@ export function createDraft(
         status: "draft",
         source: draft.source,
         title: draft.title.slice(0, 60),
-        imagePath: draft.imagePath,
-        thumbPath: draft.thumbPath,
         aiEstimate: JSON.stringify(draft.aiEstimate),
         aiModel: draft.aiModel,
         createdAt: now,
@@ -111,6 +109,9 @@ export function createDraft(
       .returning({ id: meals.id })
       .get();
     replaceItems(tx, meal.id, draft.items);
+    (draft.images ?? []).forEach((image, position) => {
+      tx.insert(mealImages).values({ mealId: meal.id, position, imagePath: image.imagePath, thumbPath: image.thumbPath, createdAt: now }).run();
+    });
     return meal.id;
   });
 }
@@ -172,6 +173,11 @@ export function saveMeal(user: User, mealId: number, input: MealInput) {
   const db = getDb();
   const meal = getMealRow(user, mealId);
   const now = Date.now();
+  // 名称要跟着内容走：食物种类没变才沿用原来的名称（例如 AI 起的名字）；
+  // 改过、增删过食物而又没给新名称时，用现在的食物重新拼一个，否则首页会一直显示旧名字
+  const before = db.select({ name: mealItems.name }).from(mealItems).where(eq(mealItems.mealId, mealId)).all();
+  const names = (list: { name: string }[]) => list.map((i) => i.name.trim()).sort().join("|");
+  const sameFoods = names(before) === names(input.items);
   db.transaction((tx) => {
     tx.update(meals)
       .set({
@@ -179,8 +185,7 @@ export function saveMeal(user: User, mealId: number, input: MealInput) {
         sharePeople: input.people,
         localDate: input.date,
         eatenAt: zonedToUtc(input.date, input.time, user.timezone),
-        // 用户没改标题时保留原来的（例如 AI 起的名字）
-        title: input.title || meal.title || titleFor(input),
+        title: input.title || (sameFoods ? meal.title : "") || titleFor(input),
         status: "confirmed",
         confirmedAt: meal.confirmedAt ?? now,
         updatedAt: now,
@@ -192,9 +197,10 @@ export function saveMeal(user: User, mealId: number, input: MealInput) {
 }
 
 export async function deleteMeal(user: User, mealId: number) {
-  const meal = getMealRow(user, mealId);
+  getMealRow(user, mealId);
+  const images = getMealImages(mealId);
   getDb().delete(meals).where(eq(meals.id, mealId)).run();
-  await removeImages(meal.imagePath, meal.thumbPath);
+  await removeImages(...images.flatMap((i) => [i.imagePath, i.thumbPath]));
 }
 
 /** 所有按 id 的访问都带 user_id 条件，用户之间互相不可见 */
@@ -216,7 +222,21 @@ export function getMeal(user: User, mealId: number): MealWithItems {
     .where(eq(mealItems.mealId, mealId))
     .orderBy(asc(mealItems.position))
     .all();
-  return withTotals(meal, items);
+  return withTotals(meal, items, getMealImages(mealId).length);
+}
+
+export function getMealImages(mealId: number) {
+  return getDb().select().from(mealImages).where(eq(mealImages.mealId, mealId)).orderBy(asc(mealImages.position)).all();
+}
+
+/** 给一顿饭补一张照片；超过上限时拒绝 */
+export function addMealImage(user: User, mealId: number, image: Pick<StoredImage, "imagePath" | "thumbPath">): number {
+  getMealRow(user, mealId);
+  const existing = getMealImages(mealId);
+  if (existing.length >= MAX_MEAL_PHOTOS) throw new AppError(409, "too_many_photos", `一顿饭最多 ${MAX_MEAL_PHOTOS} 张照片`);
+  const position = existing.length ? existing[existing.length - 1].position + 1 : 0;
+  getDb().insert(mealImages).values({ mealId, position, imagePath: image.imagePath, thumbPath: image.thumbPath, createdAt: Date.now() }).run();
+  return existing.length + 1;
 }
 
 export function getConfirmedMeals(user: User, date: string): MealWithItems[] {
@@ -234,7 +254,14 @@ export function getConfirmedMeals(user: User, date: string): MealWithItems[] {
     .where(inArray(mealItems.mealId, rows.map((m) => m.id)))
     .orderBy(asc(mealItems.position))
     .all();
-  return rows.map((m) => withTotals(m, items.filter((i) => i.mealId === m.id)));
+  const photos = db
+    .select({ mealId: mealImages.mealId, n: sql<number>`count(*)` })
+    .from(mealImages)
+    .where(inArray(mealImages.mealId, rows.map((m) => m.id)))
+    .groupBy(mealImages.mealId)
+    .all();
+  const photoCount = new Map(photos.map((p) => [p.mealId, p.n]));
+  return rows.map((m) => withTotals(m, items.filter((i) => i.mealId === m.id), photoCount.get(m.id) ?? 0));
 }
 
 /** 未确认的草稿（最近 24 小时），首页提示用户继续确认 */
@@ -291,8 +318,10 @@ export function purgeStaleDrafts(olderThanMs = 86400_000): string[] {
     .where(and(eq(meals.status, "draft"), lt(meals.createdAt, cutoff)))
     .all();
   if (stale.length === 0) return [];
-  db.delete(meals).where(inArray(meals.id, stale.map((m) => m.id))).run();
-  return stale.flatMap((m) => [m.imagePath, m.thumbPath]).filter((p): p is string => !!p);
+  const ids = stale.map((m) => m.id);
+  const images = db.select().from(mealImages).where(inArray(mealImages.mealId, ids)).all();
+  db.delete(meals).where(inArray(meals.id, ids)).run();
+  return images.flatMap((i) => [i.imagePath, i.thumbPath]).filter((p): p is string => !!p);
 }
 
 export function mealTypeOf(value: string): MealType | null {

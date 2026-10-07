@@ -182,6 +182,12 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
     }
     if (items.length === 0) return setError("至少保留一项食物");
     if (date > today) return setError("不能记录未来的日期");
+    // 名称改了但数值还是原来那样食物的：多半是忘了点“重新估算”
+    const renamed = rows.filter((r) => r.estimatedFor && r.name.trim() !== r.estimatedFor);
+    if (renamed.length > 0) {
+      const names = renamed.map((r) => `「${r.name.trim()}」`).join("、");
+      if (!window.confirm(`${names}改了名称，但热量还是按原来的食物算的。\n\n点「取消」回去按新名称重新估算；点「确定」就这样保存。`)) return;
+    }
 
     setBusy("save");
     try {
@@ -357,7 +363,7 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
           )}
           {(mode === "edit" || row.eaten !== 1) && (
             <div className="mt-2.5 flex items-center gap-1.5">
-              <span className="mr-0.5 shrink-0 text-xs text-muted">实际吃了</span>
+              <span className="mr-0.5 shrink-0 text-xs text-muted">{people > 1 && !row.personal ? "这盘吃掉" : "实际吃了"}</span>
               {[...EATEN_OPTIONS, ...(EATEN_OPTIONS.some((o) => o.value === row.eaten) ? [] : [{ value: row.eaten, label: fractionLabel(row.eaten) }])].map((o) => (
                 <button
                   key={o.value}
@@ -370,9 +376,11 @@ export function MealEditor({ mode, mealId, today, initial, estimate }: Props) {
               ))}
             </div>
           )}
-          {row.eaten !== 1 && (
+          {(row.eaten !== 1 || (people > 1 && !row.personal)) && (
             <p className="num mt-1.5 text-xs text-accent-deep">
-              按{fractionLabel(row.eaten)}计入 {Math.round(num(row.kcal) * row.eaten)} kcal（原 {Math.round(num(row.kcal))}）
+              {people > 1 && !row.personal
+                ? `整盘 ${Math.round(num(row.kcal))} ${row.eaten === 1 ? "" : `× ${fractionLabel(row.eaten)} `}÷ ${people} 人 = 我的一份 ${Math.round((num(row.kcal) * row.eaten) / people)} kcal`
+                : `按${fractionLabel(row.eaten)}计入 ${Math.round(num(row.kcal) * row.eaten)} kcal（原 ${Math.round(num(row.kcal))}）`}
             </p>
           )}
           {row.open ? (

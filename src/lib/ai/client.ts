@@ -47,6 +47,15 @@ function assertWithinDailyLimit(user: User) {
   }
 }
 
+/** 记一笔用量。记账失败只写日志：模型已经成功返回，不能因为记账把结果丢掉 */
+function recordUsage(usage: { userId: number; kind: string; model: string; inputTokens: number; outputTokens: number; durationMs: number }) {
+  try {
+    getDb().insert(schema.aiUsage).values({ ...usage, createdAt: Date.now() }).run();
+  } catch (err) {
+    log.error("failed to record ai usage", err, { kind: usage.kind });
+  }
+}
+
 /** 所有模型调用的唯一出口：限额、超时、用量记录、错误转换 */
 export async function callModel(options: CallOptions): Promise<string> {
   assertWithinDailyLimit(options.user);
@@ -68,18 +77,7 @@ export async function callModel(options: CallOptions): Promise<string> {
       options.timeoutMs ? { timeout: options.timeoutMs, maxRetries: 0 } : undefined,
     );
     const durationMs = Date.now() - started;
-    getDb()
-      .insert(schema.aiUsage)
-      .values({
-        userId: options.user.id,
-        kind: options.kind,
-        model,
-        inputTokens: response.usage?.input_tokens ?? 0,
-        outputTokens: response.usage?.output_tokens ?? 0,
-        durationMs,
-        createdAt: Date.now(),
-      })
-      .run();
+    recordUsage({ userId: options.user.id, kind: options.kind, model, inputTokens: response.usage?.input_tokens ?? 0, outputTokens: response.usage?.output_tokens ?? 0, durationMs });
     log.info("ai call", { kind: options.kind, model, ms: durationMs, tokens: response.usage?.total_tokens });
     const text = response.output_text;
     if (!text) throw new Error(`empty model output (status=${response.status})`);
@@ -125,7 +123,7 @@ export async function transcribeAudio(user: User, audio: { data: Buffer; mimeTyp
       prompt: hint,
     });
     const durationMs = Date.now() - started;
-    getDb().insert(schema.aiUsage).values({ userId: user.id, kind: "transcribe", model, durationMs, createdAt: Date.now() }).run();
+    recordUsage({ userId: user.id, kind: "transcribe", model, inputTokens: 0, outputTokens: 0, durationMs });
     log.info("ai call", { kind: "transcribe", model, ms: durationMs });
     return result.text.trim();
   } catch (err) {

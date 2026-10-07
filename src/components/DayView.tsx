@@ -42,6 +42,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const deficit = getDeficitSummary(user, date);
   const activity = getActivities(user, date, date).get(date) ?? null;
   const { energy } = getEnergy(user, today);
+  const previousWeight = getDailySeries(user, "weightKg", undefined, today).at(-2) ?? null;
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
   const fatMass = bodyFat?.weightKg ? (bodyFat.weightKg * bodyFat.pct) / 100 : null;
@@ -156,10 +157,10 @@ export function DayView({ user, date, today }: { user: User; date: string; today
             <StatRow
               stats={[
                 { label: "7日平均", value: weight.avg7Kg === null ? "—" : `${weight.avg7Kg.toFixed(1)} kg` },
-                {
-                  label: "30天趋势",
-                  value: weight.trend30PerWeek === null ? "数据不足" : `${signed(weight.trend30PerWeek)} kg/周`,
-                },
+                weight.trend30PerWeek !== null || !previousWeight
+                  ? { label: "30天趋势", value: weight.trend30PerWeek === null ? "数据不足" : `${signed(weight.trend30PerWeek)} kg/周` }
+                  : // 称得不够密、算不出趋势时，至少和上一次比一比
+                    { label: `较 ${shortDate(previousWeight.date)}`, value: `${signed(weight.latestKg - previousWeight.value)} kg` },
                 { label: "距目标", value: toGoal === null ? "—" : toGoal <= 0 ? "已达成" : `${toGoal.toFixed(1)} kg` },
               ]}
             />

@@ -11,7 +11,7 @@
  * 4. 修改识别类提示词后要升版本号：版本号会随 AI 原始估算一起存档，便于日后追溯。
  */
 
-export const MEAL_PROMPT_VERSION = "meal-v5";
+export const MEAL_PROMPT_VERSION = "meal-v6";
 
 export const MEAL_ANALYSIS = `你是一名熟悉中餐的注册营养师，任务是根据照片或文字描述，估算这顿饭里每样食物的份量和营养。结果用于减脂饮食记录，宁可如实给出范围，也不要假装精确。
 
@@ -41,7 +41,7 @@ export const MEAL_ANALYSIS = `你是一名熟悉中餐的注册营养师，任�
 - 没说份量时按最常见的份量估：“一盘”按家用菜盘一整盘，“一碗饭”约 150 g 熟米饭，“一小碗”约 100 g，“一份”按餐馆单人份。把你采用的份量写在 quantity 里，confidence 最高给 medium。
 - people_stated：用户明确说了和谁一起吃时，填包含用户本人在内的总人数。“跟丹丹一起吃”=2，“我们一家三口”=3，“和两个同事”=3。只说“我吃了”或没提，填 null。照片没有文字说明时也填 null。
 - 和别人合吃时，“一碗饭”“一杯饮料”这类按碗按杯说的主食和饮料通常是用户自己的，personal 填 true；按盘说的菜是合吃的，填 false。
-- meal_type_stated：用户明确说了是哪一餐时填 breakfast / lunch / dinner / snack（“今天中午”=lunch，“下午茶”“夜宵”=snack），没说填 null。
+- meal_type_stated：用户明确说了是哪一餐时填 breakfast / lunch / dinner / snack（“今天中午”=lunch）。“下午茶”“夜宵”，以及“午饭后”“晚饭后”“两餐之间”单独吃的零食、甜品、水果、饮料，都算 snack，不要并进正餐。没说填 null。
 
 【范围】
 kcal_low 和 kcal_high 是整桌（所有项目合计）总热量的合理范围。看得清、份量明确时约 ±10%；有炒菜、油量或份量看不清时放宽到 ±20~30%。

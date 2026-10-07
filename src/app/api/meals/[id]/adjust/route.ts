@@ -35,6 +35,14 @@ export const POST = api({}, async ({ req, user, params }) => {
   }
   if (!statement) throw badRequest("请说一下或写一下实际吃了多少");
 
-  const adjustment = await interpretAdjustment(user, items, statement);
-  return { heard: statement, ...adjustment };
+  try {
+    const adjustment = await interpretAdjustment(user, items, statement);
+    return { heard: statement, ...adjustment };
+  } catch (err) {
+    // 把听到的内容告诉用户，方便判断是语音没听清，还是这句话确实不好理解
+    if (err instanceof AppError && err.code === "not_understood") {
+      throw new AppError(422, "not_understood", `听到的是「${statement.slice(0, 50)}」，没听出每样食物吃了多少。请说得具体一点，或直接点选比例`);
+    }
+    throw err;
+  }
 });

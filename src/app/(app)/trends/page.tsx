@@ -8,7 +8,8 @@ import { rollingAverage, trendPerWeek, type DailyValue } from "@/lib/weight";
 import { getDailyTotals, getFirstMealDate, todayFor } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
 import { goalsForDate } from "@/services/profile";
-import { getDeficitSummary } from "@/services/snapshot";
+import { getActivities } from "@/services/activity";
+import { getDeficitSummary, getEnergy, goalsOn } from "@/services/snapshot";
 import { fatGrams } from "@/lib/energy";
 
 const RANGES = [
@@ -50,7 +51,12 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   // 图上画出今天，但平均值和达标天数不算今天：今天还没吃完，算进去会偏低
   const complete = intake.filter((d) => d.date < today);
   const avgKcal = mean(complete.map((d) => d.kcal));
-  const withinTarget = complete.filter((d) => d.kcal <= goals.calorieTarget).length;
+  // 每天按当天实际的目标来评价：包括当时设的目标，以及运动多时的上调
+  const { energy } = getEnergy(user, today);
+  const activities = getActivities(user, from, today);
+  const targetOn = new Map(complete.map((d) => [d.date, goalsOn(user, d.date, energy, activities.get(d.date) ?? null).goals.calorieTarget]));
+  const withinTarget = complete.filter((d) => d.kcal <= targetOn.get(d.date)!).length;
+  const avgGap = mean(complete.map((d) => d.kcal - targetOn.get(d.date)!));
 
   const deficit = getDeficitSummary(user, today);
   const deficitDays = (deficit?.days ?? []).filter((d) => d.date >= from);
@@ -128,7 +134,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
                 stats={[
                   { label: "记录天数", value: `${complete.length}` },
                   { label: "未超目标", value: `${withinTarget} 天` },
-                  { label: "日均差值", value: avgKcal === null ? "—" : `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
+                  { label: "日均差值", value: avgGap === null ? "—" : signed(Math.round(avgGap), 0) },
                 ]}
               />
               <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子，不含今天</p>

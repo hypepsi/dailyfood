@@ -78,7 +78,7 @@ export function ActivityCard({ date, isToday, burn, entry, estimateBasis }: Prop
         </div>
         {error && <p className="mt-2 text-sm text-warn">{error}</p>}
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          填手表显示的运动消耗，系统会自动加上基础代谢。一天里可以随时更新，以最后一次为准。
+          填手表显示的运动消耗，系统会自动加上基础代谢；运动多的日子会相应上调当天的热量目标。一天里可以随时更新，以最后一次为准。
           {entry && (
             <button type="button" className="ml-1 underline" onClick={clear} disabled={busy}>
               清除，改回估算

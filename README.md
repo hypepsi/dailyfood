@@ -14,7 +14,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-54%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-58%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -169,6 +169,23 @@ AI 每次返回的内容：每样食物的名称、数量、重量、热量、�
 | 没有录入 | 基础代谢 × 活动系数（1.2 / 1.375 / 1.55 / 1.725） |
 
 基础代谢优先用体脂秤实测值；没有则用 Mifflin-St Jeor 公式估算。
+
+</details>
+
+<details open>
+<summary><b>当天的热量目标</b></summary>
+
+用户设的目标隐含一个「计划热量差」= 按活动水平估算的消耗 − 目标。
+
+```
+录入了手表数据，且当天消耗高于估算：
+    当天目标 = 基础代谢 + 运动消耗 − 计划热量差      （取整到 10）
+其他情况：
+    当天目标 = 用户设的目标
+```
+
+只上调、不下调。这样运动多的日子可以多吃，热量差保持在计划的水平，而不是运动越多缺口越大。
+首页的剩余热量、趋势页的「未超目标」、7 日分析都按当天实际的目标评价。
 
 </details>
 
@@ -369,7 +386,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        9 个测试文件，54 个用例
+tests/        9 个测试文件，58 个用例
 docs/         README 用的截图
 ```
 
@@ -390,7 +407,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 54 个测试
+npm test             # 58 个测试
 npm run typecheck    # 类型检查
 ```
 

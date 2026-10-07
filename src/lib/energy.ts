@@ -23,6 +23,21 @@ export function dayBurn(energy: Energy, activity: ActivityEntry | null): DayBurn
   return { burn: energy.bmr + activity.kcal, bmr: energy.bmr, active: activity.kcal, source: "watch" };
 }
 
+/**
+ * 某一天实际使用的热量目标。
+ * 用户设的目标对应一个“计划热量差”（按活动水平估算的消耗 − 目标）。
+ * 录入了手表数据、且当天消耗比估算的高时，把目标上调到 消耗 − 计划热量差，
+ * 让热量差保持在计划的水平，而不是运动越多缺口越大。
+ * 只上调，不下调：运动少的日子仍按用户设的目标；没有手表数据的日子不调整。
+ */
+export function dailyCalorieTarget(baseTarget: number, energy: Energy | null, activity: ActivityEntry | null): { target: number; bonus: number } {
+  if (!energy || !activity) return { target: baseTarget, bonus: 0 };
+  const plannedDeficit = Math.max(0, energy.tdee - baseTarget);
+  const adjusted = Math.round((energy.bmr + activity.kcal - plannedDeficit) / 10) * 10;
+  const target = Math.max(baseTarget, adjusted);
+  return { target, bonus: target - baseTarget };
+}
+
 export type Tier = { key: "surplus" | "even" | "small" | "steady" | "strong" | "too_much"; label: string; message: string };
 
 /**

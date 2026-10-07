@@ -14,7 +14,7 @@ import { getActivities } from "./activity";
 import { getConfirmedMeals, type MealWithItems } from "./meals";
 import { getDailySeries } from "./metrics";
 import { goalsForDate } from "./profile";
-import { getDeficitSummary, getEnergy, type DeficitDay } from "./snapshot";
+import { getDeficitSummary, getEnergy, goalsOn, type DeficitDay } from "./snapshot";
 
 const { weeklyReviews } = schema;
 
@@ -66,7 +66,8 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   const dayTotals = dates.map((date) => {
     const meals = mealsByDate.get(date)!;
     const sum = (pick: (m: MealWithItems) => number) => Math.round(meals.reduce((s, m) => s + pick(m), 0));
-    return { date, kcal: sum((m) => m.totals.kcal), protein: sum((m) => m.totals.proteinG), carbs: sum((m) => m.totals.carbsG), fat: sum((m) => m.totals.fatG) };
+    const target = goalsOn(user, date, energy, activities.get(date) ?? null);
+    return { date, target: target.goals.calorieTarget, bonus: target.activityBonus, kcal: sum((m) => m.totals.kcal), protein: sum((m) => m.totals.proteinG), carbs: sum((m) => m.totals.carbsG), fat: sum((m) => m.totals.fatG) };
   });
 
   const lines: string[] = [];
@@ -82,7 +83,7 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
     const d = deficitByDate.get(t.date);
     const watch = activities.get(t.date);
     lines.push(
-      `■ ${t.date} ${formatDateCn(t.date).split(" ")[1]}：摄入 ${t.kcal} kcal（蛋白质 ${t.protein} g，碳水 ${t.carbs} g，脂肪 ${t.fat} g）` +
+      `■ ${t.date} ${formatDateCn(t.date).split(" ")[1]}：当天目标 ${t.target}${t.bonus > 0 ? `（运动多，已上调 ${t.bonus}）` : ""}；摄入 ${t.kcal} kcal（蛋白质 ${t.protein} g，碳水 ${t.carbs} g，脂肪 ${t.fat} g）` +
         (d ? `；消耗 ${d.burn} kcal（${watch ? `手表运动消耗 ${watch.kcal}` : "估算"}）；热量差 ${signed(d.deficit)}，档位「${deficitTier(d.deficit).label}」` : ""),
     );
     for (const m of mealsByDate.get(t.date)!) {
@@ -101,7 +102,7 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   const maxDay = dayTotals.reduce((a, b) => (b.kcal > a.kcal ? b : a));
   const minDay = dayTotals.reduce((a, b) => (b.kcal < a.kcal ? b : a));
   lines.push("", "【热量与营养素统计】");
-  lines.push(`日均摄入 ${avg(kcals)} kcal（目标 ${goals.calorieTarget}，日均差 ${signed(avg(kcals) - goals.calorieTarget)}）；超过目标 ${kcals.filter((k) => k > goals.calorieTarget).length} 天`);
+  lines.push(`日均摄入 ${avg(kcals)} kcal；基础目标 ${goals.calorieTarget}，运动多的日子目标会上调；相对当天目标日均差 ${signed(avg(dayTotals.map((d) => d.kcal - d.target)))}，超过当天目标 ${dayTotals.filter((d) => d.kcal > d.target).length} 天`);
   lines.push(`最高 ${maxDay.date} ${maxDay.kcal} kcal，最低 ${minDay.date} ${minDay.kcal} kcal，相差 ${maxDay.kcal - minDay.kcal}`);
   lines.push(
     `日均蛋白质 ${avg(dayTotals.map((d) => d.protein))} g（目标 ${goals.proteinTargetG}），达标 ${dayTotals.filter((d) => d.protein >= goals.proteinTargetG).length} 天；日均碳水 ${avg(dayTotals.map((d) => d.carbs))} g，脂肪 ${avg(dayTotals.map((d) => d.fat))} g`,

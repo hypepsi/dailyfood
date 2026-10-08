@@ -90,6 +90,8 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         </Link>
       ))}
 
+      {/* 卡片顺序跟着一天里的使用顺序走：先看还能吃多少 → 看 AI 怎么说 → 记录和修正饮食 → 录运动 → 看热量差 → 体重 */}
+
       <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
         <BigStat
           label={over ? "已超出今日目标" : isToday ? "今日剩余" : "当日剩余"}
@@ -119,7 +121,11 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         />
       </Card>
 
-      <DeficitCard summary={deficit} isToday={isToday} />
+      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={`${deficit?.day.burn ?? ""}|${day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}`} />}
+
+      <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
+        <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
+      </Card>
 
       <ActivityCard
         key={`${date}:${activity?.kcal ?? ""}`}
@@ -130,10 +136,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         estimateBasis={energy ? `基础代谢 ${energy.bmr} × 活动系数 ${ACTIVITY[user.activityLevel].factor}` : ""}
       />
 
-      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={`${deficit?.day.burn ?? ""}|${day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}`} />}
-      <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
-        <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
-      </Card>
+      <DeficitCard summary={deficit} isToday={isToday} />
 
       <Card icon={Scale} title="体重与体脂" action={{ href: "/weight", label: "历史", icon: History }}>
         {weight.latestKg === null ? (

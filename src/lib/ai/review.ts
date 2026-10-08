@@ -7,14 +7,14 @@ import { WEEKLY_REVIEW } from "./prompts";
 
 /** 复盘固定判断的八个维度，顺序即展示顺序 */
 export const DIMENSIONS = {
-  calories: "热量控制",
-  protein: "蛋白质",
-  deficit: "热量差与节奏",
-  food_quality: "饮食结构",
-  rhythm: "进餐规律",
-  weight: "体重变化",
-  activity: "运动消耗",
-  logging: "记录质量",
+  calories: "吃得多不多",
+  protein: "蛋白质够不够",
+  deficit: "热量差稳不稳",
+  food_quality: "吃得好不好",
+  rhythm: "三餐规律吗",
+  weight: "体重怎么样",
+  activity: "运动了多少",
+  logging: "记得全不全",
 } as const;
 export type DimensionKey = keyof typeof DIMENSIONS;
 const KEYS = Object.keys(DIMENSIONS) as DimensionKey[];

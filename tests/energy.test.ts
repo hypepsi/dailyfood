@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
-import { dayBurn, deficitTier, fatGrams, loggingStreak } from "@/lib/energy";
+import { dayBurn, deficitEquivalents, deficitTier, fatGrams, fatInJin, journey, loggingStreak, weighsLike } from "@/lib/energy";
 import { addDays } from "@/lib/time";
 import { clearActivity, setActivity } from "@/services/activity";
 import { createManualMeal } from "@/services/meals";
@@ -32,6 +32,29 @@ describe("档位与换算", () => {
     expect(loggingStreak(new Set(["2026-10-04", "2026-10-05"]), "2026-10-06", prev)).toBe(2);
     expect(loggingStreak(new Set(["2026-10-03", "2026-10-05", "2026-10-06"]), "2026-10-06", prev)).toBe(2);
     expect(loggingStreak(new Set(["2026-10-01"]), "2026-10-06", prev)).toBe(0);
+  });
+});
+
+describe("把热量差换成看得见的东西", () => {
+  it("脂肪换成斤两", () => {
+    expect([10, 153, 500, 620, 2300].map(fatInJin)).toEqual(["不到 1 两", "3 两", "1 斤", "1 斤 2 两", "4 斤 6 两"]);
+  });
+  it("找一样差不多重的东西", () => {
+    expect([30, 60, 153, 360, 2600].map(weighsLike)).toEqual([null, "一个鸡蛋", "一根香蕉", "一罐可乐", "一个小西瓜"]);
+  });
+  it("缺口换成米饭和慢跑", () => {
+    // 90 kg 的人慢跑每分钟约 11 千卡
+    expect(deficitEquivalents(522, 90)).toEqual({ riceBowls: 3, jogMinutes: 45 });
+  });
+  it("到目标的进度和预计日期", () => {
+    const j = (o: object) => journey({ startKg: 89.5, targetKg: 85, totalDeficit: 7700, recentDays: 7, recentDeficit: 3500, today: "2026-10-08", ...o }, addDays);
+    // 一共 4.5 kg，已减 1 kg → 22%；还差 3.5 kg × 7700 ÷ 每天 500 = 54 天
+    expect(j({})).toEqual({ totalKg: 4.5, doneKg: 1, percent: 22, eta: "2026-12-01" });
+    expect(j({ recentDays: 2 })!.eta).toBeNull(); // 记录太少，不估日期
+    expect(j({ recentDeficit: -300 })!.eta).toBeNull(); // 最近没有缺口，不估
+    expect(j({ recentDeficit: 70 })!.eta).toBeNull(); // 太慢，超过一年，不估
+    expect(j({ totalDeficit: -2000 })!.percent).toBe(0);
+    expect(j({ targetKg: 95 })).toBeNull(); // 目标比起点还重
   });
 });
 

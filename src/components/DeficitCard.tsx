@@ -1,5 +1,5 @@
-import { Trophy } from "lucide-react";
-import { deficitTier, fatGrams, type Tier } from "@/lib/energy";
+import { Flag, Flame, Footprints, Medal, Trophy } from "lucide-react";
+import { deficitEquivalents, deficitTier, fatGrams, fatInJin, weighsLike, type Tier } from "@/lib/energy";
 import type { DeficitSummary } from "@/services/snapshot";
 import { BigStat, Card, StatRow } from "./Card";
 
@@ -13,6 +13,13 @@ const LADDER: { key: Tier["key"]; label: string }[] = [
 ];
 
 const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toLocaleString("en-US")}`;
+
+/** “10月下旬”“明年1月上旬”这样的说法：预计日期本来就是估的，不写到具体哪一天 */
+function etaText(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const part = d <= 10 ? "上旬" : d <= 20 ? "中旬" : "下旬";
+  return `${y > new Date().getFullYear() ? "明年 " : ""}${m} 月${part}`;
+}
 
 function fatText(deficit: number): string {
   const g = Math.abs(fatGrams(deficit));
@@ -29,7 +36,9 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
     );
   }
 
-  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak } = summary;
+  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak, journey } = summary;
+  // 只有这一天吃完了、而且确实有缺口，才换算成米饭和慢跑
+  const today = hasRecords && settled && day.deficit >= 100 ? deficitEquivalents(day.deficit, summary.weightKg) : null;
   const tier = deficitTier(day.deficit);
   const surplus = day.deficit < 0;
   const bad = tier.key === "surplus" || tier.key === "too_much";
@@ -90,17 +99,54 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
       />
 
       {allTime.days > 0 && (
-        <p className="num mt-3 rounded-2xl bg-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
-          {allTime.total > 0 ? (
-            <>
-              有记录的 {allTime.days} 天里累计热量差 <b className="text-ink">{allTime.total.toLocaleString("en-US")} kcal</b>，相当于{" "}
-              <b className="text-accent-deep">{fatText(allTime.total)} 脂肪</b>
-            </>
-          ) : (
-            <>有记录的 {allTime.days} 天里累计多吃了 {Math.abs(allTime.total).toLocaleString("en-US")} kcal，慢慢调回来就好</>
+        <div className="mt-3 space-y-2.5 rounded-2xl bg-bg px-3.5 py-3">
+          {/* 今天的缺口，换成吃的和动的 */}
+          {today && (
+            <p className="flex items-start gap-2 text-sm leading-relaxed">
+              <Footprints size={17} className="mt-0.5 shrink-0 text-accent" />
+              <span>
+                {isToday ? "今天" : "这天"}的缺口相当于少吃 <b>{today.riceBowls} 碗米饭</b>，或者慢跑 <b>{today.jogMinutes} 分钟</b>
+              </span>
+            </p>
           )}
-          {streak >= 2 && <> · 已连续记录 {streak} 天</>}
-        </p>
+
+          {/* 累计下来，换成看得见的重量 */}
+          <p className="flex items-start gap-2 text-sm leading-relaxed">
+            <Medal size={17} className="mt-0.5 shrink-0 text-accent" />
+            {allTime.total > 0 ? (
+              <span>
+                记录 {allTime.days} 天，已经甩掉约 <b className="text-accent-deep">{fatInJin(fatGrams(allTime.total))}肥肉</b>
+                {weighsLike(fatGrams(allTime.total)) && <>，有{weighsLike(fatGrams(allTime.total))}那么重</>}
+              </span>
+            ) : (
+              <span>记录 {allTime.days} 天，累计多吃了 {Math.abs(allTime.total).toLocaleString("en-US")} kcal，慢慢调回来就好</span>
+            )}
+          </p>
+
+          {/* 到目标体重的路走了多远 */}
+          {journey && (
+            <div>
+              <p className="flex items-start gap-2 text-sm leading-relaxed">
+                <Flag size={17} className="mt-0.5 shrink-0 text-accent" />
+                <span>
+                  到目标要减 {journey.totalKg} kg，已经走了 <b className="text-accent-deep">{journey.percent}%</b>
+                  {journey.eta && <>，照最近的速度 {etaText(journey.eta)}能到</>}
+                </span>
+              </p>
+              <div className="ml-[25px] mt-1.5 h-2 overflow-hidden rounded-full bg-track">
+                <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${Math.max(journey.percent, 2)}%` }} />
+              </div>
+            </div>
+          )}
+
+          {streak >= 2 && (
+            <p className="flex items-center gap-2 text-sm">
+              <Flame size={17} className="shrink-0 text-accent" />
+              已经连续记录 <b>{streak} 天</b>
+            </p>
+          )}
+          <p className="text-xs text-faint">按记录的热量差推算，实际以体重为准</p>
+        </div>
       )}
     </Card>
   );

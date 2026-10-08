@@ -1,5 +1,5 @@
 import type { User } from "@/db/schema";
-import { dayBurn, fatGrams, loggingStreak, type DayBurn } from "@/lib/energy";
+import { dayBurn, fatGrams, journey, loggingStreak, type DayBurn } from "@/lib/energy";
 import { ACTIVITY, estimateEnergy, type BodyFacts } from "@/lib/goals";
 import { MEAL_LABELS, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { addDays, ageOn, localParts } from "@/lib/time";
@@ -82,7 +82,7 @@ export type DeficitDay = DayBurn & { date: string; intake: number; deficit: numb
  */
 export function getDeficitSummary(user: User, date: string, now = Date.now()) {
   const local = localParts(now, user.timezone);
-  const { energy } = getEnergy(user, local.date);
+  const { energy, facts } = getEnergy(user, local.date);
   if (!energy) return null;
 
   const goals = goalsForDate(user, date);
@@ -104,6 +104,7 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
   const weekStart = addDays(date, -6);
   const week = logged.filter((d) => d.date >= weekStart);
   const sum = (days: DeficitDay[]) => days.reduce((s, d) => s + d.deficit, 0);
+  const startWeight = getDailySeries(user, "weightKg").at(0) ?? null;
 
   return {
     day,
@@ -118,6 +119,13 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
     /** 每个计入累计的日子（有饮食记录、且已经吃完），按日期升序，供趋势图使用 */
     days: logged.sort((a, b) => a.date.localeCompare(b.date)),
     streak: loggingStreak(new Set(intakeByDate.keys()), local.date, (d) => addDays(d, -1)),
+    /** 用来把缺口换算成慢跑时间 */
+    weightKg: facts.weightKg,
+    /** 到目标体重的进度：起点是第一次称的体重 */
+    journey:
+      startWeight && user.targetWeightKg
+        ? journey({ startKg: startWeight.value, targetKg: user.targetWeightKg, totalDeficit: sum(logged), recentDays: week.length, recentDeficit: sum(week), today: local.date }, addDays)
+        : null,
   };
 }
 

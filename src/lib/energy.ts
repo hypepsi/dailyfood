@@ -51,3 +51,72 @@ export function loggingStreak(loggedDates: Set<string>, today: string, previousD
   }
   return streak;
 }
+
+// ---------- 把热量差换成看得见、摸得着的东西 ----------
+
+/** 脂肪克数 → “3 两”“1 斤 2 两”这样的说法（1 斤 = 500 g，1 两 = 50 g） */
+export function fatInJin(grams: number): string {
+  const liang = Math.round(Math.abs(grams) / 50);
+  if (liang === 0) return "不到 1 两";
+  const jin = Math.floor(liang / 10);
+  const rest = liang % 10;
+  return jin === 0 ? `${rest} 两` : rest === 0 ? `${jin} 斤` : `${jin} 斤 ${rest} 两`;
+}
+
+/** 拿一样日常的东西来比这么多脂肪有多重；从重到轻找第一个不超过它的 */
+const OBJECTS: [grams: number, name: string][] = [
+  [10000, "一桶 10 升的水"],
+  [5000, "一袋 10 斤的大米"],
+  [2500, "一个小西瓜"],
+  [1000, "一大盒 1 升的牛奶"],
+  [500, "一瓶矿泉水"],
+  [330, "一罐可乐"],
+  [200, "一个苹果"],
+  [100, "一根香蕉"],
+  [50, "一个鸡蛋"],
+];
+export function weighsLike(grams: number): string | null {
+  return OBJECTS.find(([g]) => grams >= g)?.[1] ?? null;
+}
+
+/** 一碗米饭（150 g）的热量 */
+const RICE_BOWL_KCAL = 174;
+
+/** 今天的缺口大概等于什么：几碗米饭、慢跑多少分钟 */
+export function deficitEquivalents(deficit: number, weightKg: number | null) {
+  // 慢跑约 7 MET：每分钟消耗 ≈ 7 × 3.5 × 体重 ÷ 200 千卡
+  const perMinute = (7 * 3.5 * (weightKg ?? 70)) / 200;
+  return {
+    riceBowls: Math.round((deficit / RICE_BOWL_KCAL) * 2) / 2,
+    jogMinutes: Math.round(deficit / perMinute / 5) * 5,
+  };
+}
+
+export type Journey = {
+  /** 从开始时的体重到目标体重，一共要减多少公斤 */
+  totalKg: number;
+  /** 按累计热量差推算，已经减掉的公斤数（可能为负） */
+  doneKg: number;
+  /** 0~100 */
+  percent: number;
+  /** 照最近的速度，预计哪天到目标；数据太少或没有缺口时为 null */
+  eta: string | null;
+};
+
+/**
+ * 到目标体重的进度，按累计热量差推算。
+ * 预计日期只在最近 7 天里有 5 天以上的记录、且平均每天确实有缺口时才给；最远只估一年。
+ */
+export function journey(input: { startKg: number; targetKg: number; totalDeficit: number; recentDays: number; recentDeficit: number; today: string }, addDays: (d: string, n: number) => string): Journey | null {
+  const totalKg = Math.round((input.startKg - input.targetKg) * 10) / 10;
+  if (totalKg <= 0) return null;
+  const doneKg = Math.round((input.totalDeficit / KCAL_PER_KG) * 100) / 100;
+  const percent = Math.max(0, Math.min(100, Math.round((doneKg / totalKg) * 100)));
+  let eta: string | null = null;
+  const perDay = input.recentDays >= 5 ? input.recentDeficit / input.recentDays : 0;
+  if (perDay > 0 && doneKg < totalKg) {
+    const daysLeft = Math.ceil(((totalKg - doneKg) * KCAL_PER_KG) / perDay);
+    if (daysLeft <= 365) eta = addDays(input.today, daysLeft);
+  }
+  return { totalKg, doneKg, percent, eta };
+}

@@ -16,6 +16,8 @@ import { CaptureActions } from "./CaptureActions";
 import { MealList } from "./MealList";
 import { Sparkline } from "./Sparkline";
 
+const CALORIE_TONE = { green: "accent", yellow: "caution", red: "danger" } as const;
+
 const signed = (n: number, digits = 2) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
 
 function agoLabel(days: number): string {
@@ -42,10 +44,12 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const deficit = getDeficitSummary(user, date);
   const activity = getActivities(user, date, date).get(date) ?? null;
   const { energy } = getEnergy(user, today);
-  // 吃得比目标多，但手表显示当天运动比平时估算的多、算下来仍然是少吃的：这不算“吃超了”。
-  // 目标本身不变，只是不用警示色，并在数字下面说明一句，免得先被吓一跳。
-  // 运动没有比平时多时不这样显示，否则“运动多”就成了一句假话
-  const coveredByExercise = over && !!energy && deficit?.day.source === "watch" && deficit.day.burn > energy.tdee && deficit.day.deficit > 0;
+  // 热量卡片的三种颜色（目标本身不变，只是换一种说法和颜色）：
+  //   绿：没超过目标
+  //   黄：超过了目标，但录了手表、算上当天消耗（基础代谢 + 运动）仍然有缺口
+  //   红：吃的比当天消耗还多；或者超过了目标而当天没有录运动
+  const watched = deficit?.day.source === "watch";
+  const calorieState: "green" | "yellow" | "red" = !over ? "green" : watched && deficit!.day.deficit > 0 ? "yellow" : "red";
   const previousWeight = getDailySeries(user, "weightKg", undefined, today).at(-2) ?? null;
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
@@ -98,19 +102,21 @@ export function DayView({ user, date, today }: { user: User; date: string; today
 
       <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
         <BigStat
-          label={over ? (coveredByExercise ? "比目标多吃了" : "已超出今日目标") : isToday ? "今日剩余" : "当日剩余"}
+          label={calorieState === "green" ? (isToday ? "今日剩余" : "当日剩余") : calorieState === "yellow" ? "比目标多吃了" : "已超出今日目标"}
           value={Math.abs(day.kcalRemaining).toLocaleString("en-US")}
           unit="kcal"
-          tone={over && !coveredByExercise ? "warn" : "accent"}
+          tone={CALORIE_TONE[calorieState]}
           sub={
-            coveredByExercise ? (
-              <span className="font-semibold text-accent">
-                {isToday ? "今天" : "当天"}运动多，算上消耗还有 {deficit!.day.deficit.toLocaleString("en-US")} kcal 缺口
+            calorieState !== "green" && watched ? (
+              <span className={`font-semibold ${calorieState === "yellow" ? "text-caution" : "text-danger"}`}>
+                {calorieState === "yellow"
+                  ? `算上运动消耗，还有 ${deficit!.day.deficit.toLocaleString("en-US")} kcal 缺口`
+                  : `算上运动消耗，也多吃了 ${Math.abs(deficit!.day.deficit).toLocaleString("en-US")} kcal`}
               </span>
             ) : undefined
           }
         />
-        <ProgressBar value={totals.kcal} max={goals.calorieTarget} over={over && !coveredByExercise} />
+        <ProgressBar value={totals.kcal} max={goals.calorieTarget} tone={CALORIE_TONE[calorieState]} />
         <StatRow
           stats={[
             { label: "已摄入", value: `${totals.kcal}` },

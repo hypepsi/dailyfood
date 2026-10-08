@@ -13,6 +13,9 @@
   --track: #e2ece8;
   --warn: #b84a12;
   --warn-tint: #fbe9da;
+  /* 热量卡片的三种状态：绿（accent）/ 黄（caution）/ 红（danger） */
+  --caution: #b7791f;
+  --danger: #c53030;
   --shadow: 0 1px 2px rgba(50, 40, 20, 0.07), 0 6px 16px -4px rgba(50, 40, 20, 0.1), 0 18px 36px -18px rgba(50, 40, 20, 0.14);
   --shadow-lift: 0 2px 4px rgba(50, 40, 20, 0.08), 0 14px 28px -6px rgba(50, 40, 20, 0.16), 0 28px 48px -20px rgba(50, 40, 20, 0.2);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -32,6 +35,8 @@
     --track: #262c2a;
     --warn: #f39a63;
     --warn-tint: #3d2716;
+    --caution: #ecc94b;
+    --danger: #fc8181;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
     --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.5), 0 18px 36px -10px rgba(0, 0, 0, 0.7);
   }
@@ -49,6 +54,8 @@
   --color-tint: var(--tint);
   --color-track: var(--track);
   --color-warn: var(--warn);
+  --color-caution: var(--caution);
+  --color-danger: var(--danger);
   --color-warn-tint: var(--warn-tint);
   --shadow-card: var(--shadow);
   /* 数字和英文用 Inter，中文用各系统自带的黑体 */

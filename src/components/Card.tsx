@@ -39,6 +39,11 @@ export function Card({ icon, title, action, aside, children }: Props) {
   );
 }
 
+/** 数字和进度条的颜色：accent=正常（绿），caution=留意（黄），danger=超了（红），warn=其他提醒（橙） */
+export type Tone = "accent" | "caution" | "danger" | "warn";
+const TEXT_TONE: Record<Tone, string> = { accent: "text-accent-deep", caution: "text-caution", danger: "text-danger", warn: "text-warn" };
+const BAR_TONE: Record<Tone, string> = { accent: "bg-accent", caution: "bg-caution", danger: "bg-danger", warn: "bg-warn" };
+
 /** 卡片里的主数字 */
 export function BigStat({
   label,
@@ -50,13 +55,13 @@ export function BigStat({
   label: string;
   value: string;
   unit?: string;
-  tone?: "accent" | "warn";
+  tone?: Tone;
   sub?: React.ReactNode;
 }) {
   return (
     <div>
       <div className="text-[13px] font-medium text-muted">{label}</div>
-      <div className={`num text-[2.25rem] font-extrabold leading-tight tracking-tight lg:text-[2.6rem] ${tone === "warn" ? "text-warn" : "text-accent-deep"}`}>
+      <div className={`num text-[2.25rem] font-extrabold leading-tight tracking-tight lg:text-[2.6rem] ${TEXT_TONE[tone]}`}>
         {value}
         {unit && <span className="ml-1 text-base font-bold">{unit}</span>}
       </div>
@@ -79,7 +84,7 @@ export function StatRow({ stats }: { stats: { label: string; value: string }[] }
   );
 }
 
-export function ProgressBar({ value, max, over }: { value: number; max: number; over?: boolean }) {
+export function ProgressBar({ value, max, over, tone }: { value: number; max: number; over?: boolean; tone?: Tone }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div
@@ -89,7 +94,7 @@ export function ProgressBar({ value, max, over }: { value: number; max: number; 
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <div className={`bar-fill h-full rounded-full ${over ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+      <div className={`bar-fill h-full rounded-full ${BAR_TONE[tone ?? (over ? "warn" : "accent")]}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }

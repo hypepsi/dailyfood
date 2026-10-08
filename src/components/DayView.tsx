@@ -105,7 +105,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
           sub={
             coveredByExercise ? (
               <span className="font-semibold text-accent">
-                {isToday ? "今天" : "当天"}运动多，算上消耗还少吃了 {deficit!.day.deficit.toLocaleString("en-US")} kcal
+                {isToday ? "今天" : "当天"}运动多，算上消耗还有 {deficit!.day.deficit.toLocaleString("en-US")} kcal 缺口
               </span>
             ) : undefined
           }

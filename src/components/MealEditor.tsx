@@ -352,7 +352,7 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
           </div>
           {people > 1 && (
             <p className="num mt-2 text-[13px] text-muted">
-              下面按整桌填写，合吃的菜平均分成 {people} 份，只计入你的一份；自己单独吃的（比如自己那碗饭）点一下「合吃」改成「我自己的」。
+              每盘按 {people} 人平分。只有你自己吃的，点「合吃」改成「我自己的」。
             </p>
           )}
         </div>
@@ -397,7 +397,7 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
           )}
           {(mode === "edit" || row.eaten !== 1) && (
             <div className="mt-2.5 flex items-center gap-1.5">
-              <span className="mr-0.5 shrink-0 text-xs text-muted">{people > 1 && !row.personal ? "这盘吃掉" : "实际吃了"}</span>
+              <span className="mr-0.5 shrink-0 text-xs text-muted">{people > 1 && !row.personal ? "我那份吃了" : "实际吃了"}</span>
               {[...EATEN_OPTIONS, ...(EATEN_OPTIONS.some((o) => o.value === row.eaten) ? [] : [{ value: row.eaten, label: fractionLabel(row.eaten) }])].map((o) => (
                 <button
                   key={o.value}
@@ -413,7 +413,7 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
           {(row.eaten !== 1 || (people > 1 && !row.personal)) && (
             <p className="num mt-1.5 text-xs text-accent-deep">
               {people > 1 && !row.personal
-                ? `整盘 ${Math.round(num(row.kcal))} ${row.eaten === 1 ? "" : `× ${fractionLabel(row.eaten)} `}÷ ${people} 人 = 我的一份 ${Math.round((num(row.kcal) * row.eaten) / people)} kcal`
+                ? `我那份 ${Math.round(num(row.kcal) / people)} kcal${row.eaten === 1 ? "" : `，吃了${fractionLabel(row.eaten)} → ${Math.round((num(row.kcal) * row.eaten) / people)} kcal`}`
                 : `按${fractionLabel(row.eaten)}计入 ${Math.round(num(row.kcal) * row.eaten)} kcal（原 ${Math.round(num(row.kcal))}）`}
             </p>
           )}

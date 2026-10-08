@@ -42,6 +42,10 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const deficit = getDeficitSummary(user, date);
   const activity = getActivities(user, date, date).get(date) ?? null;
   const { energy } = getEnergy(user, today);
+  // 吃得比目标多，但手表显示当天运动比平时估算的多、算下来仍然是少吃的：这不算“吃超了”。
+  // 目标本身不变，只是不用警示色，并在数字下面说明一句，免得先被吓一跳。
+  // 运动没有比平时多时不这样显示，否则“运动多”就成了一句假话
+  const coveredByExercise = over && !!energy && deficit?.day.source === "watch" && deficit.day.burn > energy.tdee && deficit.day.deficit > 0;
   const previousWeight = getDailySeries(user, "weightKg", undefined, today).at(-2) ?? null;
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
@@ -94,12 +98,19 @@ export function DayView({ user, date, today }: { user: User; date: string; today
 
       <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
         <BigStat
-          label={over ? "已超出今日目标" : isToday ? "今日剩余" : "当日剩余"}
+          label={over ? (coveredByExercise ? "比目标多吃了" : "已超出今日目标") : isToday ? "今日剩余" : "当日剩余"}
           value={Math.abs(day.kcalRemaining).toLocaleString("en-US")}
           unit="kcal"
-          tone={over ? "warn" : "accent"}
+          tone={over && !coveredByExercise ? "warn" : "accent"}
+          sub={
+            coveredByExercise ? (
+              <span className="font-semibold text-accent">
+                {isToday ? "今天" : "当天"}运动多，算上消耗还少吃了 {deficit!.day.deficit.toLocaleString("en-US")} kcal
+              </span>
+            ) : undefined
+          }
         />
-        <ProgressBar value={totals.kcal} max={goals.calorieTarget} over={over} />
+        <ProgressBar value={totals.kcal} max={goals.calorieTarget} over={over && !coveredByExercise} />
         <StatRow
           stats={[
             { label: "已摄入", value: `${totals.kcal}` },

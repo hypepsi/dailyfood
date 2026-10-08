@@ -1,6 +1,6 @@
 import type { User } from "@/db/schema";
 import { dayBurn, fatGrams, journey, loggingStreak, type DayBurn } from "@/lib/energy";
-import { ACTIVITY, estimateEnergy, type BodyFacts } from "@/lib/goals";
+import { ACTIVITY, PACES, directionOf, estimateEnergy, type BodyFacts } from "@/lib/goals";
 import { MEAL_LABELS, round1, sumNutrients, type Nutrients } from "@/lib/nutrition";
 import { addDays, ageOn, localParts } from "@/lib/time";
 import { trendPerWeek, windowAverage } from "@/lib/weight";
@@ -119,6 +119,8 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
     /** 每个计入累计的日子（有饮食记录、且已经吃完），按日期升序，供趋势图使用 */
     days: logged.sort((a, b) => a.date.localeCompare(b.date)),
     streak: loggingStreak(new Set(intakeByDate.keys()), local.date, (d) => addDays(d, -1)),
+    /** 用户想要的方向：减、保持还是增。档位和文案都按它来 */
+    direction: directionOf(user.goalPace),
     /** 用来把缺口换算成慢跑时间 */
     weightKg: facts.weightKg,
     /** 到目标体重的进度：起点是第一次称的体重 */
@@ -150,6 +152,7 @@ export function buildSnapshot(user: User, now = Date.now()) {
     date: local.date,
     time: local.time,
     timezone: user.timezone,
+    pace: user.goalPace,
     profile: { name: user.displayName, sex: user.sex, age: facts.age, heightCm: user.heightCm },
     day,
     recent: {
@@ -183,6 +186,7 @@ export function renderSnapshot(s: Snapshot): string {
   lines.push(
     `目标：每日热量 ${day.goals.calorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g，目标体重 ${fmt(day.goals.targetWeightKg, "kg")}`,
   );
+  lines.push(`用户想要的方向：${PACES[s.pace].label}（${PACES[s.pace].hint}）。所有评价和建议都要按这个方向来。`);
   if (s.energy) {
     lines.push(
       `基础代谢：约 ${s.energy.bmr} kcal（${s.energy.bmrSource}）；没有手表数据的日子按活动水平估算每日消耗约 ${s.energy.tdee} kcal（${ACTIVITY[s.facts.activityLevel].label}）`,

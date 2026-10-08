@@ -21,6 +21,19 @@ describe("目标推荐", () => {
     expect(recommendGoals({ ...me, sex: "female", measuredBmr: 1000, activityLevel: "sedentary" })!.calorieTarget).toBe(1200);
   });
 
+  it("节奏调节：每一档 = 每日消耗 ± 固定量", () => {
+    // 每日消耗 2460
+    const target = (pace: Parameters<typeof recommendGoals>[1]) => recommendGoals(me, pace)!;
+    expect(target("gain")).toMatchObject({ calorieTarget: 2750, limited: false });
+    expect(target("maintain")).toMatchObject({ calorieTarget: 2450, limited: false });
+    expect(target("slow")).toMatchObject({ calorieTarget: 2200, limited: false });
+    expect(target("steady")).toMatchObject({ calorieTarget: 1950, limited: false });
+    // 2460 − 750 = 1710，低于基础代谢 1789 → 只给到 1800，并标记“被拦住了”
+    expect(target("fast")).toMatchObject({ calorieTarget: 1800, limited: true });
+    // 蛋白质不随节奏变
+    expect(new Set(["gain", "maintain", "slow", "steady", "fast"].map((p) => target(p as "gain").proteinTargetG)).size).toBe(1);
+  });
+
   it("资料不全时不给推荐", () => {
     expect(recommendGoals({ ...me, weightKg: null })).toBeNull();
     expect(estimateEnergy({ ...me, measuredBmr: null, heightCm: null })).toBeNull();

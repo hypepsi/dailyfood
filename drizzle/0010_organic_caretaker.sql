@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `goal_pace` text DEFAULT 'steady' NOT NULL;

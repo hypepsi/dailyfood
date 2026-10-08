@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ESTIMATE_STYLES, type ActivityLevel, type EstimateStyle } from "@/db/schema";
+import { ESTIMATE_STYLES, type ActivityLevel, type EstimateStyle, type GoalPace } from "@/db/schema";
 import { ESTIMATE_STYLE } from "@/lib/ai/prompts";
 import { parseNumber, request } from "@/lib/client-api";
 import { ACTIVITY } from "@/lib/goals";
@@ -15,6 +15,7 @@ export type ProfileValues = {
   timezone: string;
   activityLevel: ActivityLevel;
   estimateStyle: EstimateStyle;
+  goalPace: GoalPace;
   calorieTarget: number;
   proteinTargetG: number;
   targetWeightKg: number | null;
@@ -67,6 +68,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
         timezone: v.timezone,
         activityLevel: v.activityLevel,
         estimateStyle: v.estimateStyle,
+        goalPace: v.goalPace,
         calorieTarget: Math.round(calorieTarget),
         proteinTargetG: Math.round(proteinTargetG),
         targetWeightKg: parseNumber(v.targetWeightKg),

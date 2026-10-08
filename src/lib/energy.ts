@@ -1,4 +1,4 @@
-import { KCAL_PER_KG, type Energy } from "./goals";
+import { KCAL_PER_KG, type Direction, type Energy } from "./goals";
 
 /** 手表记录的运动消耗，不含基础代谢 */
 export type ActivityEntry = { kcal: number };
@@ -23,19 +23,41 @@ export function dayBurn(energy: Energy, activity: ActivityEntry | null): DayBurn
   return { burn: energy.bmr + activity.kcal, bmr: energy.bmr, active: activity.kcal, source: "watch" };
 }
 
-export type Tier = { key: "surplus" | "even" | "small" | "steady" | "strong" | "too_much"; label: string; message: string };
+export type Tier = {
+  key: "surplus" | "even" | "small" | "steady" | "strong" | "too_much" | "balanced" | "under" | "over" | "gaining" | "not_enough" | "too_fast";
+  label: string;
+  message: string;
+  /** 需要提醒的状态，用警示色 */
+  bad: boolean;
+};
+
+const tier = (key: Tier["key"], label: string, message: string, bad = false): Tier => ({ key, label, message, bad });
 
 /**
- * 热量差的档位。最好的一档是 350~750（约每周减 0.3~0.7 kg）；
- * 缺口超过 1000 不当作成就来鼓励。
+ * 热量差的档位，按用户想要的方向来评价：同样是“多吃了 300”，减脂时要提醒，增重时正是目标。
+ * 减脂：最好的一档是 350~750（约每周减 0.3~0.7 kg），缺口超过 1000 不当作成就来鼓励。
+ * 保持：上下 150 以内算平衡。
+ * 增重：每天多吃 150~500 最合适。
  */
-export function deficitTier(deficit: number): Tier {
-  if (deficit < -100) return { key: "surplus", label: "今天吃超了", message: "一天超了很正常，明天照常吃就好，不用少吃来补偿。" };
-  if (deficit < 150) return { key: "even", label: "基本持平", message: "今天没长也没掉，守住了。" };
-  if (deficit < 350) return { key: "small", label: "小步前进", message: "有缺口就是在前进，积少成多。" };
-  if (deficit <= 750) return { key: "steady", label: "稳稳减脂", message: "这是最健康、最容易坚持的节奏。" };
-  if (deficit <= 1000) return { key: "strong", label: "强力燃脂", message: "今天缺口不小，记得吃够蛋白质。" };
-  return { key: "too_much", label: "缺口偏大", message: "缺口太大不容易坚持，也容易掉肌肉，别饿着自己。" };
+export function deficitTier(deficit: number, direction: Direction = "loss"): Tier {
+  if (direction === "maintain") {
+    if (deficit > 150) return tier("under", "吃得偏少", "比消耗的少了一些，想保持体重可以再吃一点。");
+    if (deficit < -150) return tier("over", "吃得偏多", "比消耗的多了一些，偶尔一天没关系。", true);
+    return tier("balanced", "收支平衡", "吃的和消耗的差不多，正是想要的。");
+  }
+  if (direction === "gain") {
+    const surplus = -deficit;
+    if (surplus < 0) return tier("not_enough", "还没吃够", "今天吃的比消耗的少，想增重得再多吃一些。", true);
+    if (surplus < 150) return tier("even", "基本持平", "和消耗差不多，再多吃一点才会长。");
+    if (surplus <= 500) return tier("gaining", "稳稳增重", "多吃得刚刚好，记得吃够蛋白质。");
+    return tier("too_fast", "多得有点多", "多出来太多容易长成脂肪，不用这么急。", true);
+  }
+  if (deficit < -100) return tier("surplus", "今天吃超了", "一天超了很正常，明天照常吃就好，不用少吃来补偿。", true);
+  if (deficit < 150) return tier("even", "基本持平", "今天没长也没掉，守住了。");
+  if (deficit < 350) return tier("small", "小步前进", "有缺口就是在前进，积少成多。");
+  if (deficit <= 750) return tier("steady", "稳稳减脂", "这是最健康、最容易坚持的节奏。");
+  if (deficit <= 1000) return tier("strong", "强力燃脂", "今天缺口不小，记得吃够蛋白质。");
+  return tier("too_much", "缺口偏大", "缺口太大不容易坚持，也容易掉肌肉，别饿着自己。", true);
 }
 
 /** 热量差折合成脂肪的克数（1 kg 脂肪 ≈ 7700 kcal）；可以为负 */

@@ -49,7 +49,8 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   //   黄：超过了目标，但录了手表、算上当天消耗（基础代谢 + 运动）仍然有缺口
   //   红：吃的比当天消耗还多；或者超过了目标而当天没有录运动
   const watched = deficit?.day.source === "watch";
-  const calorieState: "green" | "yellow" | "red" = !over ? "green" : watched && deficit!.day.deficit > 0 ? "yellow" : "red";
+  //   想增重的人吃得比目标多不是问题，一直是绿色
+  const calorieState: "green" | "yellow" | "red" = !over || user.goalPace === "gain" ? "green" : watched && deficit!.day.deficit > 0 ? "yellow" : "red";
   const previousWeight = getDailySeries(user, "weightKg", undefined, today).at(-2) ?? null;
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
@@ -102,7 +103,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
 
       <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
         <BigStat
-          label={calorieState === "green" ? (isToday ? "今日剩余" : "当日剩余") : calorieState === "yellow" ? "比目标多吃了" : "已超出今日目标"}
+          label={!over ? (isToday ? "今日剩余" : "当日剩余") : calorieState === "red" ? "已超出今日目标" : "比目标多吃了"}
           value={Math.abs(day.kcalRemaining).toLocaleString("en-US")}
           unit="kcal"
           tone={CALORIE_TONE[calorieState]}

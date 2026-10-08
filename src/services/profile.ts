@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, lte } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
-import { ACTIVITY_LEVELS, ESTIMATE_STYLES, type User } from "@/db/schema";
+import { ACTIVITY_LEVELS, ESTIMATE_STYLES, GOAL_PACES, type User } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth-password";
 import { badRequest } from "@/lib/errors";
 import { isDateString, localDate } from "@/lib/time";
@@ -25,6 +25,7 @@ export const profileInput = z.object({
   timezone: z.string().refine(isTimezone),
   activityLevel: z.enum(ACTIVITY_LEVELS),
   estimateStyle: z.enum(ESTIMATE_STYLES),
+  goalPace: z.enum(GOAL_PACES),
   // 下限是为了不让系统帮助极端节食
   calorieTarget: z.number().int().min(1200).max(6000),
   proteinTargetG: z.number().int().min(20).max(400),

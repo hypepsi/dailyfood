@@ -36,16 +36,20 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
     );
   }
 
-  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak, journey } = summary;
+  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak, journey, direction } = summary;
+  const losing = direction === "loss";
   // 只有这一天吃完了、而且确实有缺口，才换算成米饭和慢跑
-  const today = hasRecords && settled && day.deficit >= 100 ? deficitEquivalents(day.deficit, summary.weightKg) : null;
-  const tier = deficitTier(day.deficit);
+  const today = losing && hasRecords && settled && day.deficit >= 100 ? deficitEquivalents(day.deficit, summary.weightKg) : null;
+  const tier = deficitTier(day.deficit, direction);
   const surplus = day.deficit < 0;
-  const bad = tier.key === "surplus" || tier.key === "too_much";
+  const bad = tier.bad;
   const step = LADDER.findIndex((l) => l.key === tier.key);
 
-  const atTarget =
-    deficitAtTarget > 0 ? (
+  const atTarget = !losing ? (
+    <>
+      吃满{isToday ? "今天的" : ""}目标后，{deficitAtTarget >= 0 ? `比消耗少 ${deficitAtTarget.toLocaleString("en-US")}` : `比消耗多 ${Math.abs(deficitAtTarget).toLocaleString("en-US")}`} kcal
+    </>
+  ) : deficitAtTarget > 0 ? (
       <>
         吃满{isToday ? "今天的" : ""}目标后，热量差约 <b className="text-ink">{deficitAtTarget.toLocaleString("en-US")} kcal</b>，≈ {fatText(deficitAtTarget)} 脂肪
       </>
@@ -66,8 +70,8 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
           label={surplus ? (isToday ? (settled ? "今天多吃了" : "目前已经多吃了") : "当天多吃了") : !settled ? "目前的热量差（今天还没吃完）" : isToday ? "今天的热量差" : "当天的热量差"}
           value={Math.abs(day.deficit).toLocaleString("en-US")}
           unit="kcal"
-          tone={surplus ? "warn" : "accent"}
-          sub={surplus ? null : settled ? <span className="font-semibold text-accent">≈ 少了 {fatText(day.deficit)} 脂肪</span> : atTarget}
+          tone={surplus && losing ? "warn" : "accent"}
+          sub={!settled ? (surplus ? null : atTarget) : losing && !surplus ? <span className="font-semibold text-accent">≈ 少了 {fatText(day.deficit)} 脂肪</span> : null}
         />
       )}
 
@@ -77,7 +81,7 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
             <span className={`rounded-full px-3 py-1 text-sm font-bold ${bad ? "bg-warn-tint text-warn" : "bg-tint text-accent-deep"}`}>{tier.label}</span>
             <span className="text-[13px] text-muted">{tier.message}</span>
           </div>
-          {!surplus && (
+          {losing && !surplus && (
             <ol className="mt-3 grid grid-cols-5 gap-1" aria-label="热量差档位">
               {LADDER.map((l, i) => (
                 <li key={l.key} className="text-center">
@@ -113,7 +117,11 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
           {/* 累计下来，换成看得见的重量 */}
           <p className="flex items-start gap-2 text-sm leading-relaxed">
             <Medal size={17} className="mt-0.5 shrink-0 text-accent" />
-            {allTime.total > 0 ? (
+            {!losing ? (
+              <span>
+                记录 {allTime.days} 天，累计{allTime.total >= 0 ? "少吃" : "多吃"}了 <b>{Math.abs(allTime.total).toLocaleString("en-US")} kcal</b>
+              </span>
+            ) : allTime.total > 0 ? (
               <span>
                 记录 {allTime.days} 天，已经甩掉约 <b className="text-accent-deep">{fatInJin(fatGrams(allTime.total))}肥肉</b>
                 {weighsLike(fatGrams(allTime.total)) && <>，有{weighsLike(fatGrams(allTime.total))}那么重</>}
@@ -124,7 +132,7 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
           </p>
 
           {/* 到目标体重的路走了多远 */}
-          {journey && (
+          {losing && journey && (
             <div>
               <p className="flex items-start gap-2 text-sm leading-relaxed">
                 <Flag size={17} className="mt-0.5 shrink-0 text-accent" />

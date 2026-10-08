@@ -23,6 +23,19 @@ describe("档位与换算", () => {
   it("档位边界", () => {
     expect([-300, 0, 200, 500, 900, 1500].map((d) => deficitTier(d).key)).toEqual(["surplus", "even", "small", "steady", "strong", "too_much"]);
   });
+  it("同样的数字，按用户想要的方向评价", () => {
+    // 多吃了 300：减脂时要提醒，增重时正合适
+    expect(deficitTier(-300, "loss")).toMatchObject({ key: "surplus", bad: true });
+    expect(deficitTier(-300, "gain")).toMatchObject({ key: "gaining", bad: false });
+    expect(deficitTier(-300, "maintain")).toMatchObject({ key: "over", bad: true });
+    // 少吃了 500：减脂时最好，增重时是没吃够，保持时是吃少了
+    expect(deficitTier(500, "loss")).toMatchObject({ key: "steady", bad: false });
+    expect(deficitTier(500, "gain")).toMatchObject({ key: "not_enough", bad: true });
+    expect(deficitTier(500, "maintain").key).toBe("under");
+    expect(deficitTier(80, "maintain")).toMatchObject({ key: "balanced", bad: false });
+    expect(deficitTier(-800, "gain")).toMatchObject({ key: "too_fast", bad: true });
+  });
+
   it("7700 kcal ≈ 1 kg 脂肪", () => {
     expect(fatGrams(770)).toBe(100);
     expect(fatGrams(-385)).toBe(-50);

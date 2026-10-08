@@ -1,4 +1,4 @@
-import type { ActivityLevel } from "@/db/schema";
+import type { ActivityLevel, GoalPace } from "@/db/schema";
 import { estimateBmr } from "./nutrition";
 
 /** 活动系数：基础代谢 × 系数 ≈ 每日总消耗 */
@@ -9,10 +9,24 @@ export const ACTIVITY: Record<ActivityLevel, { label: string; factor: number }> 
   active: { label: "高强度，每周运动 6~7 次", factor: 1.725 },
 };
 
-/** 推荐的每日热量缺口：约对应每周减 0.45 kg（1 kg 脂肪 ≈ 7700 kcal） */
-const DAILY_DEFICIT = 500;
 export const KCAL_PER_KG = 7700;
 const MIN_CALORIES = 1200;
+
+export type Direction = "loss" | "maintain" | "gain";
+
+/**
+ * 节奏：每天比消耗多吃或少吃多少。推荐的热量目标 = 每日消耗 + delta。
+ * 1 kg 体重约等于 7700 kcal，所以 −500/天 ≈ 每周 −0.45 kg。
+ */
+export const PACES: Record<GoalPace, { label: string; delta: number; direction: Direction; hint: string }> = {
+  gain: { label: "增重", delta: 300, direction: "gain", hint: "每天比消耗多吃 300，大约每月重 1 公斤" },
+  maintain: { label: "保持", delta: 0, direction: "maintain", hint: "吃的和消耗的一样多，体重不变" },
+  slow: { label: "慢慢减", delta: -250, direction: "loss", hint: "每天少吃 250，大约每月轻 1 公斤，最不费劲" },
+  steady: { label: "稳稳减", delta: -500, direction: "loss", hint: "每天少吃 500，大约每周轻 0.45 公斤" },
+  fast: { label: "快速减", delta: -750, direction: "loss", hint: "每天少吃 750，大约每周轻 0.7 公斤，不建议超过一两个月" },
+};
+
+export const directionOf = (pace: GoalPace): Direction => PACES[pace].direction;
 
 export type BodyFacts = {
   sex: "male" | "female" | null;
@@ -41,7 +55,10 @@ export function estimateEnergy(f: BodyFacts): Energy | null {
 }
 
 export type GoalRecommendation = Energy & {
+  pace: GoalPace;
   calorieTarget: number;
+  /** 想少吃的量被“不低于基础代谢”拦住了，实际缺口比这一档写的小 */
+  limited: boolean;
   proteinTargetG: number;
   /** 蛋白质是按什么算的，展示给用户 */
   proteinBasis: string;
@@ -50,16 +67,18 @@ export type GoalRecommendation = Energy & {
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 
 /**
- * 根据最新身体数据推荐每日目标（纯计算，不调用 AI）：
- * - 热量 = 每日总消耗 − 500，但不低于基础代谢，也不低于 1200
+ * 根据最新身体数据和用户选的节奏推荐每日目标（纯计算，不调用 AI）：
+ * - 热量 = 每日总消耗 + 这一档的增减量；减的时候不低于基础代谢，也不低于 1200
  * - 蛋白质 = 去脂体重 × 2.0 g（知道体脂率时），否则 目标体重 × 1.6 g
  */
-export function recommendGoals(f: BodyFacts): GoalRecommendation | null {
+export function recommendGoals(f: BodyFacts, pace: GoalPace = "steady"): GoalRecommendation | null {
   const energy = estimateEnergy(f);
   if (!energy || !f.weightKg) return null;
-  const floor = Math.max(energy.bmr, MIN_CALORIES);
-  // 取整到 50；受下限约束时向上取整，保证不低于基础代谢
-  const calorieTarget = Math.max(roundTo(energy.tdee - DAILY_DEFICIT, 50), Math.ceil(floor / 50) * 50);
+  const wanted = roundTo(energy.tdee + PACES[pace].delta, 50);
+  // 受下限约束时向上取整，保证不低于基础代谢
+  const floor = Math.ceil(Math.max(energy.bmr, MIN_CALORIES) / 50) * 50;
+  const limited = PACES[pace].delta < 0 && wanted < floor;
+  const calorieTarget = limited ? floor : wanted;
 
   let protein: number;
   let proteinBasis: string;
@@ -72,5 +91,5 @@ export function recommendGoals(f: BodyFacts): GoalRecommendation | null {
     protein = base * 1.6;
     proteinBasis = `${f.targetWeightKg ? "目标体重" : "体重"} ${base} kg × 1.6 g`;
   }
-  return { ...energy, calorieTarget, proteinTargetG: roundTo(protein, 5), proteinBasis };
+  return { ...energy, pace, calorieTarget, limited, proteinTargetG: roundTo(protein, 5), proteinBasis };
 }

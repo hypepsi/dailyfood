@@ -18,7 +18,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-58%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-64%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -195,17 +195,28 @@ AI 每次返回的内容：每样食物的名称、数量、重量、热量、�
 </details>
 
 <details>
-<summary><b>目标推荐（「我的」页一键更新）</b></summary>
+<summary><b>节奏与目标推荐（「我的」页）</b></summary>
+
+用户选一个节奏，系统按最新身体数据算出每天该吃多少，点一下才采用。
+
+| 节奏 | 每天比消耗 | 大约 |
+|---|---|---|
+| 增重 | +300 | 每月 +1 kg |
+| 保持 | 0 | 体重不变 |
+| 慢慢减 | −250 | 每月 −1 kg |
+| 稳稳减（默认） | −500 | 每周 −0.45 kg |
+| 快速减 | −750 | 每周 −0.7 kg |
 
 ```
-每日热量 = 基础代谢 × 活动系数 − 500        （约每周减 0.45 kg）
-          且不低于基础代谢，不低于 1200
+每日热量 = 基础代谢 × 活动系数 + 这一档的增减量
+          减的时候不低于基础代谢，也不低于 1200（被拦住时页面会说明）
 
 每日蛋白质 = 去脂体重 × 2.0 g               （有体脂率时）
            = 目标体重 × 1.6 g               （没有体脂率时）
 ```
 
-不调用 AI。页面上会列出每一步的依据，点「一键更新目标」才会采用。
+不调用 AI。节奏还决定了全站怎么评价“多吃”和“少吃”：热量差的档位、首页的颜色、AI 的建议都按用户选的方向来——
+同样是多吃了 300，减的时候会提醒，增重时是“稳稳增重”。
 
 </details>
 
@@ -374,7 +385,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        10 个测试文件，58 个用例
+tests/        10 个测试文件，64 个用例
 docs/         README 用的截图
 ```
 
@@ -395,7 +406,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 58 个测试
+npm test             # 64 个测试
 npm run typecheck    # 类型检查
 ```
 

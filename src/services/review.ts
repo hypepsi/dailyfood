@@ -6,7 +6,7 @@ import { currentModel } from "@/lib/ai/client";
 import { writeReview, type Review } from "@/lib/ai/review";
 import { deficitTier, fatGrams } from "@/lib/energy";
 import { AppError } from "@/lib/errors";
-import { ACTIVITY } from "@/lib/goals";
+import { ACTIVITY, PACES, directionOf } from "@/lib/goals";
 import { MEAL_LABELS } from "@/lib/nutrition";
 import { addDays, dateRange, formatDateCn, localParts } from "@/lib/time";
 import { windowAverage } from "@/lib/weight";
@@ -69,7 +69,9 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
     return { date, kcal: sum((m) => m.totals.kcal), protein: sum((m) => m.totals.proteinG), carbs: sum((m) => m.totals.carbsG), fat: sum((m) => m.totals.fatG) };
   });
 
+  const direction = directionOf(user.goalPace);
   const lines: string[] = [];
+  lines.push(`用户想要的方向：${PACES[user.goalPace].label}（${PACES[user.goalPace].hint}）。所有评价和建议都要按这个方向来。`);
   lines.push(`复盘区间：${start} 至 ${end}（共 ${REVIEW_DAYS} 天，每天都有饮食记录）`);
   lines.push(
     `用户：${user.sex === "male" ? "男" : user.sex === "female" ? "女" : "性别未填"}，${facts.age ?? "年龄未填"} 岁，身高 ${user.heightCm ?? "未填"} cm；活动水平：${ACTIVITY[user.activityLevel].label}`,
@@ -83,7 +85,7 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
     const watch = activities.get(t.date);
     lines.push(
       `■ ${t.date} ${formatDateCn(t.date).split(" ")[1]}：摄入 ${t.kcal} kcal（蛋白质 ${t.protein} g，碳水 ${t.carbs} g，脂肪 ${t.fat} g）` +
-        (d ? `；消耗 ${d.burn} kcal（${watch ? `手表运动消耗 ${watch.kcal}` : "估算"}）；热量差 ${signed(d.deficit)}，档位「${deficitTier(d.deficit).label}」` : ""),
+        (d ? `；消耗 ${d.burn} kcal（${watch ? `手表运动消耗 ${watch.kcal}` : "估算"}）；热量差 ${signed(d.deficit)}，档位「${deficitTier(d.deficit, direction).label}」` : ""),
     );
     for (const m of mealsByDate.get(t.date)!) {
       const items = m.items
@@ -113,7 +115,7 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   if (counted.length) {
     const total = counted.reduce((s, d) => s + d.deficit, 0);
     const tiers = new Map<string, number>();
-    for (const d of counted) tiers.set(deficitTier(d.deficit).label, (tiers.get(deficitTier(d.deficit).label) ?? 0) + 1);
+    for (const d of counted) tiers.set(deficitTier(d.deficit, direction).label, (tiers.get(deficitTier(d.deficit, direction).label) ?? 0) + 1);
     lines.push("", "【热量差统计】");
     lines.push(`7 天累计热量差 ${signed(total)} kcal，折合脂肪约 ${fatGrams(total)} g；日均 ${signed(Math.round(total / counted.length))}`);
     lines.push(`档位分布：${[...tiers.entries()].map(([label, n]) => `${label} ${n} 天`).join("，")}`);

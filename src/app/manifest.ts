@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "LoseWeight 减脂助手",
-    short_name: "LoseWeight",
+    name: "食刻 · 饮食记录",
+    short_name: "食刻",
     description: "拍一顿，记一顿",
     start_url: "/",
     scope: "/",
@@ -13,9 +13,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#f4f1eb",
     lang: "zh-CN",
     icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
+      { src: "/icons/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
+      { src: "/icons/icon-maskable-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

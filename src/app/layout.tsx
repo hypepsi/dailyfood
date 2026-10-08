@@ -6,11 +6,18 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "LoseWeight",
+  title: "食刻",
   description: "拍一顿，记一顿",
-  applicationName: "LoseWeight",
-  appleWebApp: { capable: true, title: "LoseWeight", statusBarStyle: "default" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
+  applicationName: "食刻",
+  appleWebApp: { capable: true, title: "食刻", statusBarStyle: "default" },
+  // ?v= 用来让浏览器丢掉缓存的旧图标
+  icons: {
+    icon: [
+      { url: "/icons/favicon-48.png?v=2", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png?v=2",
+  },
   robots: { index: false, follow: false },
 };
 

@@ -14,6 +14,8 @@ type Result = {
   core: Record<string, number | null>;
   extra: Record<string, number>;
   warnings: string[];
+  /** 每日目标因为这次的数据变了，就带上新目标 */
+  plan: { calorieTarget: number; proteinTargetG: number } | null;
 };
 
 const dateLabel = (date: string) => `${Number(date.slice(5, 7))}月${Number(date.slice(8, 10))}日`;
@@ -97,6 +99,11 @@ export function ReportUpload() {
               {w}
             </p>
           ))}
+          {result.plan && (
+            <p className="num mt-2 rounded-xl bg-tint px-3 py-2 text-sm text-accent-deep">
+              每天的目标已按新数据更新：{result.plan.calorieTarget} kcal，蛋白质 {result.plan.proteinTargetG} g
+            </p>
+          )}
           <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5">
             {values.map((v) => (
               <div key={v.label}>

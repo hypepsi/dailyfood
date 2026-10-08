@@ -47,11 +47,11 @@ export default async function SettingsPage() {
     <div className="space-y-3 lg:space-y-4">
       <h1 className="page-title flex h-11 items-center justify-center">我的</h1>
       {base ? (
-        <GoalRecommendation key={`${user.updatedAt}`} profile={profile} options={options} basis={basis} bmr={base.bmr} />
+        <GoalRecommendation profile={profile} options={options} basis={basis} bmr={base.bmr} />
       ) : (
-        <p className="card-tint text-sm">上传一次体脂秤报告，并填好性别、出生日期和身高后，这里可以选择节奏，并算出每天该吃多少。</p>
+        <p className="card-tint text-sm">上传一次体脂秤报告，并填好性别、出生日期和身高后，这里可以选择节奏，系统会算出每天该吃多少。</p>
       )}
-      <SettingsForm key={user.updatedAt} initial={profile} bmrHint={base ? `想减的话不建议低于基础代谢 ${base.bmr} kcal` : null} />
+      <SettingsForm key={`form-${user.updatedAt}`} initial={profile} />
       <AccountActions username={user.username} />
     </div>
   );

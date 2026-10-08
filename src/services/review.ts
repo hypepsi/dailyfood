@@ -76,7 +76,7 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   lines.push(
     `用户：${user.sex === "male" ? "男" : user.sex === "female" ? "女" : "性别未填"}，${facts.age ?? "年龄未填"} 岁，身高 ${user.heightCm ?? "未填"} cm；活动水平：${ACTIVITY[user.activityLevel].label}`,
   );
-  lines.push(`目标：每日 ${goals.calorieTarget} kcal、蛋白质 ${goals.proteinTargetG} g，目标体重 ${goals.targetWeightKg ?? "未设"} kg`);
+  lines.push(`目标：每日 ${goals.calorieTarget} kcal、蛋白质 ${goals.proteinTargetG} g`);
   if (energy) lines.push(`基础代谢约 ${energy.bmr} kcal（${energy.bmrSource}）；没有手表数据的日子按每日消耗 ${energy.tdee} kcal 估算`);
 
   lines.push("", "【每天的明细】");

@@ -66,7 +66,6 @@ export function getEnergy(user: User, date: string, weight = getWeightStats(user
     bodyFatPct: bodyFat?.value ?? null,
     measuredBmr: measuredBmr?.value ?? null,
     activityLevel: user.activityLevel,
-    targetWeightKg: user.targetWeightKg,
   };
   return { facts, energy: estimateEnergy(facts), bodyFat };
 }
@@ -184,7 +183,7 @@ export function renderSnapshot(s: Snapshot): string {
       `${fmt(s.profile.age, "岁")}，身高${fmt(s.profile.heightCm, "cm")}`,
   );
   lines.push(
-    `目标：每日热量 ${day.goals.calorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g，目标体重 ${fmt(day.goals.targetWeightKg, "kg")}`,
+    `目标：每日热量 ${day.goals.calorieTarget} kcal，每日蛋白质 ${day.goals.proteinTargetG} g（由用户选的节奏和身体数据自动算出）`,
   );
   lines.push(`用户想要的方向：${PACES[s.pace].label}（${PACES[s.pace].hint}）。所有评价和建议都要按这个方向来。`);
   if (s.energy) {

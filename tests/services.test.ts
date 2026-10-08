@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
+import { addDays, localDate } from "@/lib/time";
 import { createDraft, createManualMeal, deleteMeal, getDailyTotals, getMeal, saveMeal, type MealInput } from "@/services/meals";
 import { addMetric, getDailySeries } from "@/services/metrics";
-import { goalsForDate, updateProfile } from "@/services/profile";
+import { syncPlan } from "@/services/plan";
+import { goalsForDate, setGoals, updateProfile } from "@/services/profile";
 import { buildSnapshot, getDaySummary, getWeightStats, renderSnapshot } from "@/services/snapshot";
 
 let db: Db;
@@ -112,7 +114,7 @@ describe("饮食记录", () => {
 describe("目标与身体数据", () => {
   it("修改目标不改变过去日子的评价标准", () => {
     db.insert(schema.goalHistory).values({ userId: user.id, effectiveDate: "2026-09-01", calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85, createdAt: 0 }).run();
-    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", estimateStyle: "standard", goalPace: "steady", calorieTarget: 1800, proteinTargetG: 140, targetWeightKg: 85 });
+    setGoals(user, { calorieTarget: 1800, proteinTargetG: 140 });
     expect(goalsForDate(user, "2026-09-15").calorieTarget).toBe(2000);
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1800);
   });
@@ -120,9 +122,33 @@ describe("目标与身体数据", () => {
   it("第一次改目标时保留旧目标：过去的日子不会被新目标重新评价", () => {
     // 从没改过目标的用户（没有任何历史）
     expect(goalsForDate(user, "2026-01-01").calorieTarget).toBe(2000);
-    updateProfile(user, { displayName: "me", sex: "male", birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light", estimateStyle: "standard", goalPace: "steady", calorieTarget: 1700, proteinTargetG: 150, targetWeightKg: 80 });
+    setGoals(user, { calorieTarget: 1700, proteinTargetG: 150 });
     expect(goalsForDate(user, "2026-01-01")).toEqual({ calorieTarget: 2000, proteinTargetG: 130, targetWeightKg: 85 });
     expect(goalsForDate(user, "2099-01-01").calorieTarget).toBe(1700);
+  });
+
+  it("每天吃多少由节奏和身体数据自动算出：换节奏、更新身体数据都会跟着变", () => {
+    const profile = { displayName: "me", sex: "male" as const, birthDate: "1987-03-04", heightCm: 182.5, timezone: "Asia/Shanghai", activityLevel: "light" as const, estimateStyle: "standard" as const, targetWeightKg: null };
+    // 资料不全（还没有体重）时算不出来，保留原来的目标
+    updateProfile(user, { ...profile, goalPace: "steady" });
+    expect(syncPlan(user.id)).toBeNull();
+
+    // 有了身体数据：基础代谢 1789 × 1.375 = 2460，稳稳减 → 1950；去脂体重 65.7 × 2 → 130
+    const today = localDate(Date.now(), "Asia/Shanghai");
+    addMetric(user, { date: addDays(today, -1), weightKg: 89.55, bodyFatPct: 26.6, waistCm: null, muscleKg: null, skeletalMuscleKg: null, visceralFat: null, bmrKcal: 1789, note: null });
+    expect(syncPlan(user.id)).toEqual({ calorieTarget: 1950, proteinTargetG: 130 });
+    expect(syncPlan(user.id)).toBeNull(); // 没有变化就不重复写
+
+    // 换成保持
+    updateProfile(user, { ...profile, goalPace: "maintain" });
+    expect(syncPlan(user.id)).toEqual({ calorieTarget: 2450, proteinTargetG: 130 });
+
+    // 新的体脂秤报告：基础代谢变了，目标自动跟着变
+    // （基础代谢 1700 × 1.375 = 2338 → 2350；两天平均体重 88.78、体脂 25% → 去脂体重 66.6 × 2 → 135）
+    addMetric(user, { date: today, weightKg: 88, bodyFatPct: 25, waistCm: null, muscleKg: null, skeletalMuscleKg: null, visceralFat: null, bmrKcal: 1700, note: null });
+    expect(syncPlan(user.id)).toEqual({ calorieTarget: 2350, proteinTargetG: 135 });
+    const stored = db.select().from(schema.users).all().find((u) => u.id === user.id)!;
+    expect([stored.calorieTarget, stored.proteinTargetG]).toEqual([2350, 135]);
   });
 
   it("不能把饮食记到未来", () => {

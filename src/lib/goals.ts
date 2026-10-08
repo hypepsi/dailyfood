@@ -37,7 +37,6 @@ export type BodyFacts = {
   /** 体脂秤实测的基础代谢，有则优先使用 */
   measuredBmr: number | null;
   activityLevel: ActivityLevel;
-  targetWeightKg: number | null;
 };
 
 export type Energy = { bmr: number; bmrSource: "实测" | "公式估算"; tdee: number };
@@ -69,7 +68,7 @@ const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 /**
  * 根据最新身体数据和用户选的节奏推荐每日目标（纯计算，不调用 AI）：
  * - 热量 = 每日总消耗 + 这一档的增减量；减的时候不低于基础代谢，也不低于 1200
- * - 蛋白质 = 去脂体重 × 2.0 g（知道体脂率时），否则 目标体重 × 1.6 g
+ * - 蛋白质 = 去脂体重 × 2.0 g（知道体脂率时），否则 身高对应的标准体重 × 1.6 g
  */
 export function recommendGoals(f: BodyFacts, pace: GoalPace = "steady"): GoalRecommendation | null {
   const energy = estimateEnergy(f);
@@ -86,10 +85,14 @@ export function recommendGoals(f: BodyFacts, pace: GoalPace = "steady"): GoalRec
     const lean = f.weightKg * (1 - f.bodyFatPct / 100);
     protein = lean * 2.0;
     proteinBasis = `去脂体重 ${lean.toFixed(1)} kg × 2.0 g`;
+  } else if (f.heightCm) {
+    // 不知道体脂率时，按身高对应的标准体重（BMI 22）来算，免得体重大的人被算出过高的蛋白质
+    const reference = 22 * (f.heightCm / 100) ** 2;
+    protein = reference * 1.6;
+    proteinBasis = `身高对应的标准体重 ${reference.toFixed(1)} kg × 1.6 g`;
   } else {
-    const base = f.targetWeightKg ?? f.weightKg;
-    protein = base * 1.6;
-    proteinBasis = `${f.targetWeightKg ? "目标体重" : "体重"} ${base} kg × 1.6 g`;
+    protein = f.weightKg * 1.4;
+    proteinBasis = `体重 ${f.weightKg} kg × 1.4 g`;
   }
   return { ...energy, pace, calorieTarget, limited, proteinTargetG: roundTo(protein, 5), proteinBasis };
 }

@@ -3,6 +3,7 @@ import { badRequest } from "@/lib/errors";
 import { api } from "@/lib/http";
 import { prepareDocumentImage } from "@/lib/images";
 import { recordReport } from "@/services/metrics";
+import { syncPlan } from "@/services/plan";
 
 export const maxDuration = 90;
 
@@ -17,5 +18,6 @@ export const POST = api({}, async ({ req, user }) => {
   const image = await prepareDocumentImage(Buffer.from(await file.arrayBuffer()));
   const report = await readBodyReport(user, image);
   const saved = recordReport(user, report);
-  return { ...saved, core: report.core, extra: report.extra, warnings: report.warnings };
+  // 身体数据变了，每天该吃多少跟着重新算；有变化就告诉用户
+  return { ...saved, core: report.core, extra: report.extra, warnings: report.warnings, plan: syncPlan(user.id) };
 });

@@ -35,13 +35,11 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 const inputClass = "num w-32 rounded-xl bg-bg px-3 py-2 text-right outline-none focus:ring-1 focus:ring-accent";
 
-export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmrHint: string | null }) {
+export function SettingsForm({ initial }: { initial: ProfileValues }) {
   const router = useRouter();
   const [v, setV] = useState({
     ...initial,
     heightCm: initial.heightCm?.toString() ?? "",
-    calorieTarget: String(initial.calorieTarget),
-    proteinTargetG: String(initial.proteinTargetG),
     targetWeightKg: initial.targetWeightKg?.toString() ?? "",
   });
   const [status, setStatus] = useState<{ kind: "idle" | "busy" | "ok" | "error"; message?: string }>({ kind: "idle" });
@@ -52,12 +50,6 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const calorieTarget = parseNumber(v.calorieTarget);
-    const proteinTargetG = parseNumber(v.proteinTargetG);
-    if (calorieTarget === null || calorieTarget < 1200) {
-      return setStatus({ kind: "error", message: "每日热量目标不能低于 1200 kcal" });
-    }
-    if (proteinTargetG === null) return setStatus({ kind: "error", message: "请填写蛋白质目标" });
     setStatus({ kind: "busy" });
     try {
       await request("PUT", "/api/profile", {
@@ -69,8 +61,6 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
         activityLevel: v.activityLevel,
         estimateStyle: v.estimateStyle,
         goalPace: v.goalPace,
-        calorieTarget: Math.round(calorieTarget),
-        proteinTargetG: Math.round(proteinTargetG),
         targetWeightKg: parseNumber(v.targetWeightKg),
       });
       setStatus({ kind: "ok", message: "已保存" });
@@ -82,21 +72,6 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
 
   return (
     <form onSubmit={save} className="space-y-3 lg:space-y-4">
-      <section className="card card-list">
-        <h2 className="pb-1 pt-3 text-sm font-semibold text-accent">目标</h2>
-        <div className="divide-y divide-line">
-          <Row label="每日热量" hint={bmrHint ?? undefined}>
-            <input className={inputClass} inputMode="numeric" value={v.calorieTarget} onChange={(e) => set({ calorieTarget: e.target.value })} />
-          </Row>
-          <Row label="每日蛋白质" hint="克">
-            <input className={inputClass} inputMode="numeric" value={v.proteinTargetG} onChange={(e) => set({ proteinTargetG: e.target.value })} />
-          </Row>
-          <Row label="目标体重" hint="kg">
-            <input className={inputClass} inputMode="decimal" value={v.targetWeightKg} onChange={(e) => set({ targetWeightKg: e.target.value })} />
-          </Row>
-        </div>
-      </section>
-
       <section className="card">
         <h2 className="text-sm font-semibold text-accent">照片看不清时，AI 怎么估</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -146,7 +121,7 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
           <Row label="身高" hint="cm">
             <input className={inputClass} inputMode="decimal" value={v.heightCm} onChange={(e) => set({ heightCm: e.target.value })} />
           </Row>
-          <Row label="活动水平" hint="没录手表消耗的日子按它估算">
+          <Row label="活动水平" hint="用来估算每天的消耗">
             <select className={`${inputClass} w-44 text-left`} value={v.activityLevel} onChange={(e) => set({ activityLevel: e.target.value as ActivityLevel })}>
               {(Object.keys(ACTIVITY) as ActivityLevel[]).map((k) => (
                 <option key={k} value={k}>
@@ -154,6 +129,9 @@ export function SettingsForm({ initial, bmrHint }: { initial: ProfileValues; bmr
                 </option>
               ))}
             </select>
+          </Row>
+          <Row label="想减到的体重" hint="kg，可以不填；只用来显示进度">
+            <input className={inputClass} inputMode="decimal" value={v.targetWeightKg} onChange={(e) => set({ targetWeightKg: e.target.value })} />
           </Row>
           <Row label="时区" hint="决定每天从几点算起">
             <input className={`${inputClass} w-44`} value={v.timezone} autoCapitalize="none" onChange={(e) => set({ timezone: e.target.value })} />

@@ -26,9 +26,7 @@ export const profileInput = z.object({
   activityLevel: z.enum(ACTIVITY_LEVELS),
   estimateStyle: z.enum(ESTIMATE_STYLES),
   goalPace: z.enum(GOAL_PACES),
-  // 下限是为了不让系统帮助极端节食
-  calorieTarget: z.number().int().min(1200).max(6000),
-  proteinTargetG: z.number().int().min(20).max(400),
+  /** 想减到（或增到）的体重，可以不填；只用来显示进度，不参与计算每天吃多少 */
   targetWeightKg: z.number().min(30).max(300).nullable(),
 });
 export type ProfileInput = z.infer<typeof profileInput>;
@@ -38,46 +36,34 @@ const EPOCH_DATE = "0000-01-01";
 
 export type Goals = { calorieTarget: number; proteinTargetG: number; targetWeightKg: number | null };
 
+/** 保存资料。每日热量和蛋白质不在这里填：它们由节奏和身体数据算出来，见 services/plan.ts */
 export function updateProfile(user: User, input: ProfileInput) {
+  getDb().update(users).set({ ...input, updatedAt: Date.now() }).where(eq(users.id, user.id)).run();
+}
+
+/**
+ * 写入新的每日目标，并记进目标历史：过去的日子仍按当时的目标评价。
+ * 同一天多次变化只保留最后一次。
+ */
+export function setGoals(user: User, goals: { calorieTarget: number; proteinTargetG: number }) {
   const db = getDb();
   const now = Date.now();
-  const goalsChanged =
-    input.calorieTarget !== user.calorieTarget ||
-    input.proteinTargetG !== user.proteinTargetG ||
-    input.targetWeightKg !== user.targetWeightKg;
+  const effectiveDate = localDate(now, user.timezone);
   db.transaction((tx) => {
-    tx.update(users).set({ ...input, updatedAt: now }).where(eq(users.id, user.id)).run();
-    if (goalsChanged) {
-      const effectiveDate = localDate(now, input.timezone);
-      // 第一次改目标时，先把旧目标存成“从一开始就生效”的一条，否则过去的日子会被新目标重新评价
-      const hasHistory = tx.select({ id: goalHistory.id }).from(goalHistory).where(eq(goalHistory.userId, user.id)).limit(1).get();
-      if (!hasHistory) {
-        tx.insert(goalHistory)
-          .values({
-            userId: user.id,
-            effectiveDate: EPOCH_DATE,
-            calorieTarget: user.calorieTarget,
-            proteinTargetG: user.proteinTargetG,
-            targetWeightKg: user.targetWeightKg,
-            createdAt: now,
-          })
-          .run();
-      }
-      // 同一天多次修改只保留最后一次
-      tx.delete(goalHistory)
-        .where(and(eq(goalHistory.userId, user.id), eq(goalHistory.effectiveDate, effectiveDate)))
-        .run();
+    tx.update(users).set({ ...goals, updatedAt: now }).where(eq(users.id, user.id)).run();
+    // 第一次变化时，先把旧目标存成“从一开始就生效”的一条，否则过去的日子会被新目标重新评价
+    const hasHistory = tx.select({ id: goalHistory.id }).from(goalHistory).where(eq(goalHistory.userId, user.id)).limit(1).get();
+    if (!hasHistory) {
       tx.insert(goalHistory)
-        .values({
-          userId: user.id,
-          effectiveDate,
-          calorieTarget: input.calorieTarget,
-          proteinTargetG: input.proteinTargetG,
-          targetWeightKg: input.targetWeightKg,
-          createdAt: now,
-        })
+        .values({ userId: user.id, effectiveDate: EPOCH_DATE, calorieTarget: user.calorieTarget, proteinTargetG: user.proteinTargetG, targetWeightKg: user.targetWeightKg, createdAt: now })
         .run();
     }
+    tx.delete(goalHistory)
+      .where(and(eq(goalHistory.userId, user.id), eq(goalHistory.effectiveDate, effectiveDate)))
+      .run();
+    tx.insert(goalHistory)
+      .values({ userId: user.id, effectiveDate, ...goals, targetWeightKg: user.targetWeightKg, createdAt: now })
+      .run();
   });
 }
 

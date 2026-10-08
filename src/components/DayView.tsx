@@ -109,7 +109,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         />
       </Card>
 
-      <Card icon={Egg} title="蛋白质" action={{ href: "/trends", label: "历史", icon: History }}>
+      <Card icon={Egg} title="蛋白质">
         <BigStat label={proteinDone ? "已达标" : "还差"} value={`${Math.round(proteinDone ? totals.proteinG : day.proteinRemaining)}`} unit="g" />
         <ProgressBar value={totals.proteinG} max={goals.proteinTargetG} />
         <StatRow

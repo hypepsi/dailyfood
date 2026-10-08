@@ -45,14 +45,19 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const weightChange = weightAvg.length >= 2 ? weightAvg.at(-1)!.value - weightAvg[0].value : null;
   const weightTrend = trendPerWeek(allWeights, today, Math.max(14, Math.round((Date.parse(today) - Date.parse(from)) / 86400000) + 1));
 
+  const deficit = getDeficitSummary(user, today);
   const goals = goalsForDate(user, today);
   const intake = getDailyTotals(user, from, today);
-  // 图上画出今天，但平均值和达标天数不算今天：今天还没吃完，算进去会偏低
-  const complete = intake.filter((d) => d.date < today);
+  // 图上画出今天，但今天还没吃完时，平均值和达标天数不算今天：算进去会偏低
+  // 和热量差用同一个口径：今天记了晚餐或过了 22 点，就算吃完了，可以计入
+  const todayDone = deficit?.settled ?? false;
+  const complete = intake.filter((d) => d.date < today || todayDone);
   const avgKcal = mean(complete.map((d) => d.kcal));
-  const withinTarget = complete.filter((d) => d.kcal <= goals.calorieTarget).length;
+  // 每天按当天生效的目标来评价（目标会随节奏和身体数据变化）
+  const targetOn = new Map(complete.map((d) => [d.date, goalsForDate(user, d.date).calorieTarget]));
+  const withinTarget = complete.filter((d) => d.kcal <= targetOn.get(d.date)!).length;
+  const avgGap = mean(complete.map((d) => d.kcal - targetOn.get(d.date)!));
 
-  const deficit = getDeficitSummary(user, today);
   const deficitDays = (deficit?.days ?? []).filter((d) => d.date >= from);
   const deficitTotal = deficitDays.reduce((s, d) => s + d.deficit, 0);
 
@@ -128,10 +133,10 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
                 stats={[
                   { label: "记录天数", value: `${complete.length}` },
                   { label: "未超目标", value: `${withinTarget} 天` },
-                  { label: "日均差值", value: avgKcal === null ? "—" : `${signed(Math.round(avgKcal) - goals.calorieTarget, 0)}` },
+                  { label: "日均差值", value: avgGap === null ? "—" : signed(Math.round(avgGap), 0) },
                 ]}
               />
-              <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子，不含今天</p>
+              <p className="mt-3 text-xs text-faint">平均值只统计有记录的日子；今天吃完后才计入</p>
             </>
           )}
         </Card>

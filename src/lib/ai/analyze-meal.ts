@@ -25,7 +25,7 @@ const JSON_SCHEMA = {
         required: ["name", "quantity", "weight_g", "kcal", "protein_g", "carbs_g", "fat_g", "personal", "confidence"],
         properties: {
           name: { type: "string" },
-          quantity: { type: "string", description: "人能看懂的数量，如“2 个”“1 碗”“约半份”" },
+          quantity: { type: "string", description: "简短的数量，10 个字以内，如“2 个”“1 碗”“约半份”；不要在这里写解释" },
           weight_g: { type: ["number", "null"], description: "可食部分克数；饮料用毫升数" },
           kcal: { type: "number" },
           protein_g: { type: "number" },

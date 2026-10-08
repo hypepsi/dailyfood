@@ -66,7 +66,8 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   const dayTotals = dates.map((date) => {
     const meals = mealsByDate.get(date)!;
     const sum = (pick: (m: MealWithItems) => number) => Math.round(meals.reduce((s, m) => s + pick(m), 0));
-    return { date, kcal: sum((m) => m.totals.kcal), protein: sum((m) => m.totals.proteinG), carbs: sum((m) => m.totals.carbsG), fat: sum((m) => m.totals.fatG) };
+    const dayGoals = goalsForDate(user, date);
+    return { date, target: dayGoals.calorieTarget, proteinTarget: dayGoals.proteinTargetG, kcal: sum((m) => m.totals.kcal), protein: sum((m) => m.totals.proteinG), carbs: sum((m) => m.totals.carbsG), fat: sum((m) => m.totals.fatG) };
   });
 
   const direction = directionOf(user.goalPace);
@@ -103,10 +104,10 @@ export function renderReviewData(user: User, window: ReviewWindow, now = Date.no
   const maxDay = dayTotals.reduce((a, b) => (b.kcal > a.kcal ? b : a));
   const minDay = dayTotals.reduce((a, b) => (b.kcal < a.kcal ? b : a));
   lines.push("", "【热量与营养素统计】");
-  lines.push(`日均摄入 ${avg(kcals)} kcal（目标 ${goals.calorieTarget}，日均差 ${signed(avg(kcals) - goals.calorieTarget)}）；超过目标 ${kcals.filter((k) => k > goals.calorieTarget).length} 天`);
+  lines.push(`日均摄入 ${avg(kcals)} kcal（现在的目标 ${goals.calorieTarget}）；按每天当时的目标算，平均每天差 ${signed(avg(dayTotals.map((d) => d.kcal - d.target)))}，超过目标 ${dayTotals.filter((d) => d.kcal > d.target).length} 天`);
   lines.push(`最高 ${maxDay.date} ${maxDay.kcal} kcal，最低 ${minDay.date} ${minDay.kcal} kcal，相差 ${maxDay.kcal - minDay.kcal}`);
   lines.push(
-    `日均蛋白质 ${avg(dayTotals.map((d) => d.protein))} g（目标 ${goals.proteinTargetG}），达标 ${dayTotals.filter((d) => d.protein >= goals.proteinTargetG).length} 天；日均碳水 ${avg(dayTotals.map((d) => d.carbs))} g，脂肪 ${avg(dayTotals.map((d) => d.fat))} g`,
+    `日均蛋白质 ${avg(dayTotals.map((d) => d.protein))} g（目标 ${goals.proteinTargetG}），达标 ${dayTotals.filter((d) => d.protein >= d.proteinTarget).length} 天；日均碳水 ${avg(dayTotals.map((d) => d.carbs))} g，脂肪 ${avg(dayTotals.map((d) => d.fat))} g`,
   );
   const macroKcal = sumOf((d) => d.protein * 4) + sumOf((d) => d.carbs * 4) + sumOf((d) => d.fat * 9);
   lines.push(`三大营养素供能比：蛋白质 ${pct(sumOf((d) => d.protein * 4), macroKcal)}%，碳水 ${pct(sumOf((d) => d.carbs * 4), macroKcal)}%，脂肪 ${pct(sumOf((d) => d.fat * 9), macroKcal)}%`);

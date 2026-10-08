@@ -139,7 +139,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         />
       </Card>
 
-      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={`${deficit?.day.burn ?? ""}|${day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}`} />}
+      {isToday && day.meals.length > 0 && <AdviceCard refreshKey={`${goals.calorieTarget}|${user.goalPace}|${deficit?.day.burn ?? ""}|${day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}`} />}
 
       <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
         <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />

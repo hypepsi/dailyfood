@@ -113,6 +113,8 @@ export function getDeficitSummary(user: User, date: string, now = Date.now()) {
     settled,
     /** 如果今天正好吃到目标，热量差会是多少 */
     deficitAtTarget: day.burn - goals.calorieTarget,
+    /** 已经吃到或超过目标了：这时再说“吃满目标后会怎样”就没有意义 */
+    reachedTarget: day.intake >= goals.calorieTarget,
     week: { days: week.length, total: sum(week) },
     allTime: { days: logged.length, total: sum(logged) },
     /** 每个计入累计的日子（有饮食记录、且已经吃完），按日期升序，供趋势图使用 */
@@ -198,10 +200,12 @@ export function renderSnapshot(s: Snapshot): string {
         ? `今天的消耗：${d.day.burn} kcal（基础代谢 ${d.day.bmr} + 用户从手表录入的运动消耗 ${d.day.active}；一天没过完时这个数还会涨）`
         : `今天的消耗：约 ${d.day.burn} kcal（今天没有录入手表数据，按活动水平估算）`,
     );
+    // “吃到目标”只在还没吃到的时候才有意义；已经超过目标就不再说
+    const atTarget = day.kcalRemaining > 0 ? `；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal` : "";
     lines.push(
       d.hasRecords
-        ? `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`
-        : `今天还没有饮食记录，暂不计算热量差；如果正好吃到目标，热量差约 ${d.deficitAtTarget} kcal`,
+        ? `今天的热量差（消耗 − 已摄入）：${d.day.deficit} kcal${d.settled ? "" : "（今天还没吃完，这个数会随着进食变小）"}${atTarget}`
+        : `今天还没有饮食记录，暂不计算热量差${atTarget}`,
     );
     if (d.week.days > 0) {
       lines.push(
@@ -216,7 +220,7 @@ export function renderSnapshot(s: Snapshot): string {
   for (const m of day.meals) {
     const time = localParts(m.eatenAt, s.timezone).time;
     const items = m.items.map((i) => `${i.name}${i.quantity ? ` ${i.quantity}` : ""}`).join("；");
-    const shared = m.sharePeople > 1 ? `；${m.sharePeople} 人分食，以下数字已是用户本人的一份` : "";
+    const shared = m.sharePeople > 1 ? `；${m.sharePeople} 人一起吃，前面的热量和蛋白质已经是用户自己那一份` : "";
     lines.push(`- ${MEAL_LABELS[m.mealType]} ${time}：${m.totals.kcal} kcal，蛋白质 ${Math.round(m.totals.proteinG)} g（${items}${shared}）`);
   }
   lines.push(

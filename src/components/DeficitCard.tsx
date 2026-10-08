@@ -36,16 +36,18 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
     );
   }
 
-  const { day, settled, hasRecords, deficitAtTarget, week, allTime, streak, journey, direction } = summary;
+  const { day, settled, hasRecords, deficitAtTarget, reachedTarget, week, allTime, streak, journey, direction } = summary;
   const losing = direction === "loss";
-  // 只有这一天吃完了、而且确实有缺口，才换算成米饭和慢跑
-  const today = losing && hasRecords && settled && day.deficit >= 100 ? deficitEquivalents(day.deficit, summary.weightKg) : null;
+  // 只有这一天吃完了、缺口在合适的范围里，才换算成米饭和慢跑；
+  // 缺口偏大时上面已经在提醒“别饿着”，这里再夸“相当于慢跑 105 分钟”就自相矛盾了
+  const today = losing && hasRecords && settled && day.deficit >= 100 && !deficitTier(day.deficit, direction).bad ? deficitEquivalents(day.deficit, summary.weightKg) : null;
   const tier = deficitTier(day.deficit, direction);
   const surplus = day.deficit < 0;
   const bad = tier.bad;
   const step = LADDER.findIndex((l) => l.key === tier.key);
 
-  const atTarget = !losing ? (
+  // 已经吃到目标了，就不再说“吃满目标后会怎样”
+  const atTarget = reachedTarget ? null : !losing ? (
     <>
       吃满{isToday ? "今天的" : ""}目标后，{deficitAtTarget >= 0 ? `比消耗少 ${deficitAtTarget.toLocaleString("en-US")}` : `比消耗多 ${Math.abs(deficitAtTarget).toLocaleString("en-US")}`} kcal
     </>
@@ -77,9 +79,9 @@ export function DeficitCard({ summary, isToday }: { summary: DeficitSummary | nu
 
       {hasRecords && settled && (
         <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <span className={`rounded-full px-3 py-1 text-sm font-bold ${bad ? "bg-warn-tint text-warn" : "bg-tint text-accent-deep"}`}>{tier.label}</span>
-            <span className="text-[13px] text-muted">{tier.message}</span>
+          <div className="flex items-start gap-2">
+            <span className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold ${bad ? "bg-warn-tint text-warn" : "bg-tint text-accent-deep"}`}>{tier.label}</span>
+            <span className="pt-1 text-[13px] leading-relaxed text-muted">{tier.message}</span>
           </div>
           {losing && !surplus && (
             <ol className="mt-3 grid grid-cols-5 gap-1" aria-label="热量差档位">

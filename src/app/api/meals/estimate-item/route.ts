@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { analyzeMeal } from "@/lib/ai/analyze-meal";
+import { AppError } from "@/lib/errors";
 import { api } from "@/lib/http";
 
 export const maxDuration = 90;
@@ -18,6 +19,10 @@ export const POST = api({ body }, async ({ user, body }) => {
   const portion = [body.quantity, body.weightG ? `约 ${body.weightG} 克` : ""].filter(Boolean).join("，");
   const estimate = await analyzeMeal(user, {
     text: `只有这一样食物，请只返回这一项：${body.name}${portion ? `（${portion}）` : ""}`,
+  }).catch((err) => {
+    // 通用的“没识别出食物，请重拍”在这里不合适：用户是在改名字，不是在拍照
+    if (err instanceof AppError && err.code === "no_food") throw new AppError(422, "no_food", `没认出「${body.name}」是什么食物，换个说法试试，或者直接填热量`);
+    throw err;
   });
   // 模型偶尔会把一样食物拆成两项，这里合并成一项返回
   const sum = (pick: (i: (typeof estimate.items)[number]) => number) => Math.round(estimate.items.reduce((s, i) => s + pick(i), 0) * 10) / 10;

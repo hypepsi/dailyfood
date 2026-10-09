@@ -64,7 +64,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const deficitDays = (deficit?.days ?? []).filter((d) => d.date >= from);
   const deficitTotal = deficitDays.reduce((s, d) => s + d.deficit, 0);
 
-  const top = getTopFoods(user, from, today);
+  const top = getTopFoods(user, from, today, 5);
   const topKcal = top.foods.reduce((sum, f) => sum + f.kcal, 0);
 
   const bodyFat = inRange(allBodyFat);

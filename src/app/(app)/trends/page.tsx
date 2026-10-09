@@ -42,7 +42,11 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const weights = inRange(allWeights);
   // 滑动平均用区间之前的数据做铺垫，区间开头才不会失真
   const weightAvg = inRange(rollingAverage(allWeights));
-  const weightChange = weightAvg.length >= 2 ? weightAvg.at(-1)!.value - weightAvg[0].value : null;
+  // 称得还不够多时，“7 日平均”没有意义（两个点的平均线只会画出一条让人看不懂的斜线），
+  // 这时直接把每次称的体重连起来；称满 5 次以后再画平均线
+  const smooth = weights.length >= 5;
+  const weightLine = smooth ? weightAvg : weights;
+  const weightChange = weightLine.length >= 2 ? weightLine.at(-1)!.value - weightLine[0].value : null;
   const weightTrend = trendPerWeek(allWeights, today, Math.max(14, Math.round((Date.parse(today) - Date.parse(from)) / 86400000) + 1));
 
   const deficit = getDeficitSummary(user, today);
@@ -63,7 +67,15 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
 
   const bodyFat = inRange(allBodyFat);
   const waist = inRange(allWaist);
-  const chartRange = { from, to: today };
+  /**
+   * 数据只集中在最近几天时，从第一条数据开始画（至少画 7 天），
+   * 免得一张 30 天的图只有最右边一小角有东西。
+   */
+  const fit = (points: { date: string }[]) => {
+    const first = points[0]?.date;
+    const start = first && first > from ? (first < addDays(today, -6) ? first : addDays(today, -6)) : from;
+    return { from: start > from ? start : from, to: today };
+  };
 
   return (
     <div>
@@ -92,16 +104,13 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             </Link>
           ) : (
             <>
-              <BigStat label="7日平均" value={weightAvg.at(-1)!.value.toFixed(1)} unit="kg" />
+              <BigStat label={smooth ? "7日平均" : "最新体重"} value={weightLine.at(-1)!.value.toFixed(smooth ? 1 : 2).replace(/0$/, "")} unit="kg" />
               <div className="mt-2">
-                <TrendChart
-                  kind="line"
-                  {...chartRange}
-                  unit="kg"
-                  digits={1}
-                  primary={{ label: "7日平均", points: weightAvg }}
-                  secondary={{ label: "当日体重", points: weights }}
-                />
+                {smooth ? (
+                  <TrendChart kind="line" {...fit(weights)} unit="kg" digits={1} primary={{ label: "7日平均", points: weightAvg }} secondary={{ label: "当日体重", points: weights }} />
+                ) : (
+                  <TrendChart kind="line" {...fit(weights)} unit="kg" digits={2} primary={{ label: "体重", points: weights }} />
+                )}
               </div>
               <StatRow
                 stats={[
@@ -123,7 +132,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
               <div className="mt-2">
                 <TrendChart
                   kind="bar"
-                  {...chartRange}
+                  {...fit(intake)}
                   unit="kcal"
                   primary={{ label: "热量", points: intake.map((d) => ({ date: d.date, value: d.kcal })) }}
                   target={{ label: "目标", value: goals.calorieTarget }}
@@ -156,7 +165,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
               <div className="mt-2">
                 <TrendChart
                   kind="bar"
-                  {...chartRange}
+                  {...fit(deficitDays)}
                   unit="kcal"
                   primary={{ label: "热量差", points: deficitDays.map((d) => ({ date: d.date, value: d.deficit })) }}
                   diverging={{ positive: "有缺口", negative: "吃超了" }}
@@ -179,7 +188,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             <BigStat label="最新" value={bodyFat.at(-1)!.value.toFixed(1)} unit="%" />
             {bodyFat.length > 1 && (
               <div className="mt-2">
-                <TrendChart kind="line" {...chartRange} unit="%" digits={1} primary={{ label: "体脂率", points: bodyFat }} />
+                <TrendChart kind="line" {...fit(bodyFat)} unit="%" digits={1} primary={{ label: "体脂率", points: bodyFat }} />
               </div>
             )}
           </Card>
@@ -190,7 +199,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             <BigStat label="最新" value={waist.at(-1)!.value.toFixed(1)} unit="cm" />
             {waist.length > 1 && (
               <div className="mt-2">
-                <TrendChart kind="line" {...chartRange} unit="cm" digits={1} primary={{ label: "腰围", points: waist }} />
+                <TrendChart kind="line" {...fit(waist)} unit="cm" digits={1} primary={{ label: "腰围", points: waist }} />
               </div>
             )}
           </Card>

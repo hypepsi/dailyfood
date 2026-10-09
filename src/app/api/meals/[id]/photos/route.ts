@@ -59,7 +59,7 @@ export const POST = api({}, async ({ req, user, params }) => {
   let edit: MealEdit | null = null;
   let note = "";
   try {
-    edit = await editMeal(user, items, "补拍了一张照片，请对照清单看看有没有漏掉或需要修正的。", [stored.main]);
+    edit = await editMeal(user, items, "补拍了一张照片，请对照清单看看有没有漏掉或需要修正的。", { images: [stored.main] });
   } catch (err) {
     if (!(err instanceof AppError)) throw err;
     note = err.code === "not_understood" ? "照片已添加，里面没有发现清单以外的食物。" : "照片已添加，但这次没能识别，请手动补充或稍后再试。";

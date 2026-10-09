@@ -35,6 +35,16 @@ describe("“说一句”修改方案的校验", () => {
     expect(normalizeEdit({ ...base, people: 3 }, 2).people).toBe(3);
   });
 
+  it("点着某一样说的：只改这一样，模型想顺手动别的也不让", () => {
+    const raw = { ...base, title: "莴笋炒肉配米饭", operations: [op("update", 2, { item: item("莴笋炒肉", 380) }), op("update", 1, { item: item("糙米饭") }), op("portion", 3, { eaten_fraction: 0.5 }), op("add", null, { item: item("卤蛋", 75) })] };
+    const e = normalizeEdit(raw, 3, 1);
+    expect(e.updates.map((u) => [u.index, u.item.name])).toEqual([[1, "莴笋炒肉"]]);
+    expect(e.portions).toEqual([]);
+    expect(e.adds.map((a) => a.name)).toEqual(["卤蛋"]); // 顺带说“还有个卤蛋”仍然可以加
+    // 针对的那一样没有任何改动时，算没听懂
+    expect(() => normalizeEdit({ ...base, operations: [op("update", 1, { item: item("糙米饭") })] }, 3, 1)).toThrow(AppError);
+  });
+
   it("没听懂、什么都没改、或想删光所有食物时报错，不动任何数据", () => {
     expect(() => normalizeEdit({ ...base, understood: false }, 2)).toThrow(AppError);
     expect(() => normalizeEdit(base, 2)).toThrow(AppError);

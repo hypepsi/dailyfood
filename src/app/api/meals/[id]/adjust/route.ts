@@ -51,7 +51,10 @@ export const POST = api({}, async ({ req, user, params }) => {
   if (!statement) throw badRequest("请说一下或写一下哪里不对");
 
   try {
-    const edit = await editMeal(user, items, statement);
+    // 用户点着某一样食物说的时候，前端会带上它在清单里的位置
+    const target = Number(form.get("target"));
+    const focus = form.get("target") !== null && Number.isInteger(target) && target >= 0 && target < items.length ? target : undefined;
+    const edit = await editMeal(user, items, statement, { focus });
     return { heard: statement, ...edit };
   } catch (err) {
     // 把听到的内容告诉用户，方便判断是语音没听清，还是这句话确实不好理解

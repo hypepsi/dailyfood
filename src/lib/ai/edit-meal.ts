@@ -104,7 +104,7 @@ function cleanItem(raw: z.infer<typeof itemOutput>): EditedItem | null {
  * 校验模型输出：只接受清单里存在的编号；同一项不会既被删除又被修改；
  * 什么都没改或没听懂时报错，不动任何数据。
  */
-export function normalizeEdit(raw: unknown, itemCount: number): MealEdit {
+export function normalizeEdit(raw: unknown, itemCount: number, focus?: number): MealEdit {
   const parsed = modelOutput.parse(raw);
   const edit: MealEdit = { updates: [], adds: [], removes: [], portions: [], title: null, people: null, summary: parsed.summary.trim().slice(0, 120) };
   const valid = (i: number | null): i is number => i !== null && Number.isInteger(i) && i >= 1 && i <= itemCount;
@@ -116,6 +116,12 @@ export function normalizeEdit(raw: unknown, itemCount: number): MealEdit {
     else if (op.action === "remove") edit.removes.push(op.index - 1);
     else if (op.action === "update" && item) edit.updates.push({ index: op.index - 1, item });
     else if (op.action === "portion" && op.eaten_fraction !== null) edit.portions.push({ index: op.index - 1, fraction: Math.round(clamp(op.eaten_fraction, 3) * 100) / 100 });
+  }
+  // 用户是点着某一样说的：只接受针对这一样的修改（补充新食物仍然允许），别的项目即使模型想动也不动
+  if (focus !== undefined) {
+    edit.removes = edit.removes.filter((i) => i === focus);
+    edit.updates = edit.updates.filter((u) => u.index === focus);
+    edit.portions = edit.portions.filter((p) => p.index === focus);
   }
   // 删除优先：已经删掉的项目不再修改
   const removed = new Set(edit.removes);
@@ -138,7 +144,9 @@ export type CurrentItem = { name: string; quantity: string; weightG: number | nu
  * 把“面条是乌冬面”“米饭剩了一半”这样的话，变成对食物清单的精确修改。
  * 只改用户提到的项目；被改的项目由模型重新估算，其余数值原样保留。
  */
-export async function editMeal(user: User, items: CurrentItem[], statement: string, images: Buffer[] = []): Promise<MealEdit> {
+export async function editMeal(user: User, items: CurrentItem[], statement: string, options: { images?: Buffer[]; focus?: number } = {}): Promise<MealEdit> {
+  const { images = [], focus } = options;
+  const said = focus === undefined ? `用户说：${statement}` : `用户正在修改第 ${focus + 1} 项「${items[focus].name}」，下面这句话说的就是这一项。\n用户说：${statement}`;
   const list = items
     .map((i, n) => `${n + 1}. ${i.name}｜${i.quantity || "数量未填"}｜${i.weightG ?? "?"} g｜${Math.round(i.kcal)} kcal｜蛋白质 ${i.proteinG} g，碳水 ${i.carbsG} g，脂肪 ${i.fatG} g`)
     .join("\n");
@@ -151,7 +159,7 @@ export async function editMeal(user: User, items: CurrentItem[], statement: stri
         role: "user",
         content: [
           ...images.map((image): AiContent => ({ type: "input_image", image_url: `data:image/webp;base64,${image.toString("base64")}`, detail: "high" })),
-          { type: "input_text", text: `当前的食物清单：\n${list}\n\n用户说：${statement}` },
+          { type: "input_text", text: `当前的食物清单：\n${list}\n\n${said}` },
         ],
       },
     ],
@@ -159,7 +167,7 @@ export async function editMeal(user: User, items: CurrentItem[], statement: stri
     maxOutputTokens: 2000,
   });
   try {
-    return normalizeEdit(JSON.parse(output), items.length);
+    return normalizeEdit(JSON.parse(output), items.length, focus);
   } catch (err) {
     if (err instanceof AppError) throw err;
     log.error("meal edit did not match schema", err);

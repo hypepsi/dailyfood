@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, Mic, Plus, Sparkles, Trash2 } from "lucide-react";
+import { VoiceOverlay } from "./VoiceOverlay";
 import { MealAdjust, EATEN_OPTIONS, fractionLabel, type AdjustItem, type AdjustResult } from "./MealAdjust";
 import { MealPhotos } from "./MealPhotos";
 import { MEAL_TYPES, type MealType } from "@/db/schema";
@@ -98,6 +99,10 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
   const [busy, setBusy] = useState<"" | "save" | "refine" | "delete">("");
   const [error, setError] = useState("");
   const [estimating, setEstimating] = useState<number | null>(null);
+  // 点某一样食物上的麦克风：只改这一样
+  const [listeningRow, setListeningRow] = useState<number | null>(null);
+  const [rowBusy, setRowBusy] = useState<number | null>(null);
+  const [rowNote, setRowNote] = useState<{ key: number; ok: boolean; text: string } | null>(null);
 
   // 明细是整桌的量；“我的份”= 整桌 ÷ 人数
   const tableKcal = Math.round(rows.reduce((s, r) => s + num(r.kcal), 0));
@@ -159,6 +164,35 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
     });
     if (result.title) setTitle(result.title);
     if (result.people) setPeople(result.people);
+  }
+
+  /**
+   * 对着某一样食物说一句：“是莴笋炒肉”“只吃了一半”“没有这个”。
+   * 不用说是哪一样，系统知道你点的是哪个，也只会改这一个。
+   */
+  async function adjustRow(rowKey: number, audio: Blob) {
+    // 没填名称的行不发给 AI；记下发出去的每一项对应编辑页的第几行
+    const rowIndexes = rows.map((r, n) => (r.name.trim() ? n : -1)).filter((n) => n >= 0);
+    const target = rowIndexes.findIndex((n) => rows[n].key === rowKey);
+    const name = rows.find((r) => r.key === rowKey)?.name ?? "";
+    setListeningRow(null);
+    setRowBusy(rowKey);
+    try {
+      const form = new FormData();
+      form.append("items", JSON.stringify(rowIndexes.map((n) => { const { eaten: _e, ...item } = currentItems[n]; return item; })));
+      form.append("target", String(target));
+      form.append("audio", audio, "speech");
+      const result = await request<AdjustResult>("POST", `/api/meals/${mealId}/adjust`, form);
+      // 这一行可能被改名，提示要跟着它走；被删掉了就提示在页面底部
+      const stillThere = !result.removes.includes(target);
+      applyAdjust(result, rowIndexes);
+      if (stillThere) setRowNote({ key: rowKey, ok: true, text: `「${result.heard}」→ ${result.summary}` });
+      else setError(`已按「${result.heard}」去掉了${name}`);
+    } catch (err) {
+      setRowNote({ key: rowKey, ok: false, text: (err as Error).message });
+    } finally {
+      setRowBusy(null);
+    }
   }
 
   function update(key: number, patch: Partial<Row>) {
@@ -376,10 +410,24 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
               </button>
             )}
             {row.confidence === "low" && <span className="shrink-0 rounded-full bg-warn-tint px-2.5 py-1 text-xs text-warn">不太确定</span>}
+            {mode !== "new" && mealId !== undefined && row.name.trim() !== "" && (
+              <button
+                aria-label={`语音修改${row.name}`}
+                disabled={rowBusy !== null}
+                onClick={() => {
+                  setRowNote(null);
+                  setListeningRow(row.key);
+                }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-accent active:bg-line disabled:opacity-40"
+              >
+                <Mic size={18} className={rowBusy === row.key ? "animate-pulse" : ""} />
+              </button>
+            )}
             <button aria-label="删除这一项" className="-mr-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-faint active:bg-line" onClick={() => setRows((rs) => rs.filter((r) => r.key !== row.key))}>
               <Trash2 size={18} />
             </button>
           </div>
+          {rowNote?.key === row.key && <p className={`mt-1.5 text-[13px] leading-relaxed ${rowNote.ok ? "text-accent-deep" : "text-warn"}`}>{rowNote.text}</p>}
           <div className="mt-2.5 grid grid-cols-3 gap-2">
             <Field label="数量" value={row.quantity} onChange={(v) => update(row.key, { quantity: v })} />
             <Field label="重量 g" value={row.weight} onChange={(v) => changeWeight(row, v)} numeric />
@@ -441,6 +489,14 @@ export function MealEditor({ mode, mealId, photoCount = 0, today, initial, estim
         <button className="w-full py-2 text-sm text-faint" onClick={remove} disabled={busy !== ""}>
           {busy === "delete" ? "处理中…" : mode === "draft" ? "放弃，不记录这顿" : "删除这顿饭"}
         </button>
+      )}
+
+      {listeningRow !== null && (
+        <VoiceOverlay
+          title={`正在听，说说「${rows.find((r) => r.key === listeningRow)?.name ?? ""}」哪里不对`}
+          onRecorded={(audio) => adjustRow(listeningRow, audio)}
+          onClose={() => setListeningRow(null)}
+        />
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">

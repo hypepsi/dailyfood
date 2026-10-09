@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Flame, Percent, Ruler, Scale, Trophy } from "lucide-react";
+import { Flame, Percent, Ruler, Scale, Trophy, Utensils } from "lucide-react";
 import { BigStat, Card, StatRow } from "@/components/Card";
 import { TrendChart } from "@/components/TrendChart";
 import { requireUser } from "@/lib/session";
 import { addDays } from "@/lib/time";
 import { rollingAverage, trendPerWeek, type DailyValue } from "@/lib/weight";
-import { getDailyTotals, getFirstMealDate, todayFor } from "@/services/meals";
+import { getDailyTotals, getFirstMealDate, getTopFoods, todayFor } from "@/services/meals";
 import { getDailySeries } from "@/services/metrics";
 import { goalsForDate } from "@/services/profile";
 import { getDeficitSummary } from "@/services/snapshot";
@@ -63,6 +63,9 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
 
   const deficitDays = (deficit?.days ?? []).filter((d) => d.date >= from);
   const deficitTotal = deficitDays.reduce((s, d) => s + d.deficit, 0);
+
+  const top = getTopFoods(user, from, today);
+  const topKcal = top.foods.reduce((sum, f) => sum + f.kcal, 0);
 
   const bodyFat = inRange(allBodyFat);
   const waist = inRange(allWaist);
@@ -181,6 +184,30 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             </>
           )}
         </Card>
+
+        {top.foods.length > 0 && (
+          <Card icon={Utensils} title="热量主要吃在哪">
+            <p className="mb-3 text-[13px] text-muted">这段时间你吃进去热量最多的几样，按自己实际吃的那一份算。</p>
+            <ol className="space-y-2.5">
+              {top.foods.map((f, i) => (
+                <li key={f.name}>
+                  <div className="flex items-baseline gap-2">
+                    <span className="num w-5 shrink-0 text-right text-[13px] font-bold text-faint">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{f.name}</span>
+                    <span className="num shrink-0 text-[13px] text-muted">{f.times} 次</span>
+                    <span className="num w-[4.5rem] shrink-0 text-right font-bold">{f.kcal.toLocaleString("en-US")}</span>
+                  </div>
+                  <div className="ml-7 mt-1 h-1.5 overflow-hidden rounded-full bg-track">
+                    <div className="bar-fill h-full rounded-full bg-accent" style={{ width: `${Math.max(2, Math.round((f.kcal / top.foods[0].kcal) * 100))}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="num mt-3 border-t border-line pt-3 text-[13px] text-muted">
+              这 {top.foods.length} 样一共 {topKcal.toLocaleString("en-US")} kcal，占全部的 {Math.round((topKcal / top.totalKcal) * 100)}%
+            </p>
+          </Card>
+        )}
 
         {bodyFat.length > 0 && (
           <Card icon={Percent} title="体脂率">

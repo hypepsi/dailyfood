@@ -329,3 +329,38 @@ export function mealTypeOf(value: string): MealType | null {
 }
 
 export const todayFor = (user: User) => localDate(Date.now(), user.timezone);
+
+export type TopFood = { name: string; kcal: number; times: number };
+
+/** 同一样食物 AI 每次起的名字会略有不同（“水煮蛋”“水煮鸡蛋（2 个）”），去掉括号里的说明后再归并 */
+const foodKey = (name: string) => name.replace(/[（(][^）)]*[）)]/g, "").replace(/\s+/g, "").trim();
+
+/**
+ * 一段时间里，用户自己吃进去热量最多的几样食物。
+ * 按“实际计入”的热量算：没吃完的按比例，合吃的按自己那一份。
+ */
+export function getTopFoods(user: User, from: string, to: string, limit = 10): { foods: TopFood[]; totalKcal: number } {
+  const rows = getDb()
+    .select({ name: mealItems.name, kcal: mealItems.kcal, eaten: mealItems.eatenFraction, personal: mealItems.personal, people: meals.sharePeople })
+    .from(mealItems)
+    .innerJoin(meals, eq(meals.id, mealItems.mealId))
+    .where(and(eq(meals.userId, user.id), eq(meals.status, "confirmed"), gte(meals.localDate, from), lte(meals.localDate, to)))
+    .all();
+  const byFood = new Map<string, TopFood>();
+  let totalKcal = 0;
+  for (const r of rows) {
+    const kcal = (r.kcal * r.eaten) / (r.personal ? 1 : r.people);
+    totalKcal += kcal;
+    const key = foodKey(r.name) || r.name;
+    const entry = byFood.get(key) ?? { name: key, kcal: 0, times: 0 };
+    entry.kcal += kcal;
+    if (r.eaten > 0) entry.times += 1;
+    byFood.set(key, entry);
+  }
+  const foods = [...byFood.values()]
+    .filter((f) => f.kcal >= 1)
+    .sort((a, b) => b.kcal - a.kcal)
+    .slice(0, limit)
+    .map((f) => ({ ...f, kcal: Math.round(f.kcal) }));
+  return { foods, totalKcal: Math.round(totalKcal) };
+}

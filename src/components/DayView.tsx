@@ -16,6 +16,9 @@ import { CaptureActions } from "./CaptureActions";
 import { MealList } from "./MealList";
 import { Sparkline } from "./Sparkline";
 
+/** 多少天没称体重就提醒一次 */
+const WEIGH_IN_REMINDER_DAYS = 7;
+
 const CALORIE_TONE = { green: "accent", yellow: "caution", red: "danger" } as const;
 
 const signed = (n: number, digits = 2) => `${n > 0 ? "+" : ""}${n.toFixed(digits)}`;
@@ -51,6 +54,9 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const watched = deficit?.day.source === "watch";
   //   想增重的人吃得比目标多不是问题，一直是绿色
   const calorieState: "green" | "yellow" | "red" = !over || user.goalPace === "gain" ? "green" : watched && deficit!.day.deficit > 0 ? "yellow" : "red";
+  // 今天记了就算上今天；还没记时，连续天数先按到昨天为止显示，不会一早起来就“断了”
+  const streak = deficit?.streak ?? 0;
+  const daysSinceWeighIn = weight.latestDate ? daysBetween(weight.latestDate, today) : null;
   const previousWeight = getDailySeries(user, "weightKg", undefined, today).at(-2) ?? null;
   const bodyFat = getLatestBodyFat(user);
   // 脂肪量 = 同一次测量的体重 × 体脂率，由程序换算
@@ -72,7 +78,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         <div className="text-center">
           <h1 className="page-title">{formatDateCn(date)}</h1>
           {isToday ? (
-            <p className="text-[13px] font-medium text-muted">今天</p>
+            <p className="text-[13px] font-medium text-muted">{streak >= 2 ? `今天 · 连续记录第 ${streak} 天` : "今天"}</p>
           ) : (
             <Link href="/" className="block text-[13px] text-accent">
               回到今天
@@ -91,6 +97,15 @@ export function DayView({ user, date, today }: { user: User; date: string; today
           </Link>
         )}
       </header>
+
+      {/* 提醒：超过一周没称体重。称了就自动消失 */}
+      {isToday && daysSinceWeighIn !== null && daysSinceWeighIn >= WEIGH_IN_REMINDER_DAYS && (
+        <Link href="/weight" className="flex items-center gap-2.5 rounded-2xl bg-tint px-4 py-3 text-sm font-medium text-accent-deep">
+          <Scale size={17} className="shrink-0 text-accent" />
+          <span className="flex-1">已经 {daysSinceWeighIn} 天没称体重了，找个早上称一下</span>
+          <ChevronRight size={18} />
+        </Link>
+      )}
 
       {drafts.map((d) => (
         <Link key={d.id} href={`/meal/${d.id}`} className="flex items-center justify-between rounded-2xl bg-warn-tint px-4 py-3 text-sm text-warn">

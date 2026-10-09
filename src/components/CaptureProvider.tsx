@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Camera, Images, Sparkles, X } from "lucide-react";
 import { MAX_MEAL_PHOTOS, type MealType } from "@/db/schema";
 import { request } from "@/lib/client-api";
 import { compressImage } from "@/lib/compress-image";
@@ -25,7 +26,8 @@ export function useCapture(): Capture {
 }
 
 /**
- * 拍照和语音记录的唯一实现：选图/录音 → 上传识别 → 跳到确认页。
+ * 拍照和语音记录的唯一实现。
+ * 拍照：拍完先停在预览，可以接着再拍或从相册加（最多 4 张），点「开始识别」后一起上传 → 跳到确认页。
  * 底部导航的相机按钮和首页的按钮都通过它触发。
  */
 export function CaptureProvider({ children }: { children: React.ReactNode }) {
@@ -33,10 +35,10 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const cameraInput = useRef<HTMLInputElement>(null);
   const albumInput = useRef<HTMLInputElement>(null);
   const targetDate = useRef<string | undefined>(undefined);
-  const [preview, setPreview] = useState<string | null>(null);
+  // 已经拍好、还没发出去的照片。拍完先停在这里，可以接着再拍，最后一起识别
+  const [staged, setStaged] = useState<{ file: File; url: string }[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [photoCount, setPhotoCount] = useState(1);
   const [voice, setVoice] = useState<{ date?: string; mealType?: MealType } | null>(null);
   const closeVoice = useCallback(() => setVoice(null), []);
   const analyzeVoice = useCallback(
@@ -52,25 +54,33 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     [voice, router],
   );
 
-  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
-
   function close() {
-    setPreview(null);
+    staged.forEach((p) => URL.revokeObjectURL(p.url));
+    setStaged([]);
     setError("");
     setBusy(false);
   }
 
-  async function handleFiles(list: FileList | null) {
-    const files = Array.from(list ?? []).slice(0, MAX_MEAL_PHOTOS);
+  /** 新拍的或从相册选的照片先放进待发列表，不马上识别 */
+  function addFiles(list: FileList | null) {
+    const files = Array.from(list ?? []);
     if (files.length === 0) return;
-    const file = files[0];
-    setPhotoCount(files.length);
+    setError("");
+    setStaged((current) => [...current, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))].slice(0, MAX_MEAL_PHOTOS));
+  }
+
+  function removeStaged(url: string) {
+    URL.revokeObjectURL(url);
+    setStaged((current) => current.filter((p) => p.url !== url));
+  }
+
+  /** 把待发的照片一起交给 AI，合在一起识别 */
+  async function analyze() {
     setError("");
     setBusy(true);
-    setPreview(URL.createObjectURL(file));
     try {
       const form = new FormData();
-      for (const f of files) form.append("image", await compressImage(f), "meal.jpg");
+      for (const p of staged) form.append("image", await compressImage(p.file), "meal.jpg");
       if (targetDate.current) form.append("date", targetDate.current);
       const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form);
       router.push(`/meal/${id}`);
@@ -82,7 +92,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   }
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    void handleFiles(e.target.files);
+    addFiles(e.target.files);
     e.target.value = "";
   };
 
@@ -104,31 +114,59 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           onClose={closeVoice}
         />}
 
-      {preview && (
-        <div data-no-pull className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-black/95 p-8 text-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="" className={`max-h-[50dvh] rounded-3xl object-contain ${busy ? "animate-pulse" : ""}`} />
-          {busy ? (
-            <p className="text-lg">{photoCount > 1 ? `正在识别 ${photoCount} 张照片…` : "正在识别食物…"}</p>
-          ) : (
-            <>
-              <p className="text-center text-lg">{error}</p>
-              <div className="flex gap-3">
-                <button className="rounded-2xl bg-white/15 px-6 py-3" onClick={close}>
-                  关闭
-                </button>
-                <button
-                  className="rounded-2xl bg-white px-6 py-3 font-semibold text-black"
-                  onClick={() => {
-                    close();
-                    cameraInput.current?.click();
-                  }}
-                >
-                  重新拍
-                </button>
+      {staged.length > 0 && (
+        <div data-no-pull className="fixed inset-0 z-50 flex flex-col bg-black/95 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            {staged.length === 1 ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={staged[0].url} alt="" className={`max-h-full max-w-full rounded-3xl object-contain ${busy ? "animate-pulse" : ""}`} />
+            ) : (
+              <div className={`grid w-full max-w-md grid-cols-2 gap-2 ${busy ? "animate-pulse" : ""}`}>
+                {staged.map((p, n) => (
+                  <div key={p.url} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={`第 ${n + 1} 张`} className="aspect-[4/3] w-full rounded-2xl object-cover" />
+                    {!busy && (
+                      <button aria-label={`去掉第 ${n + 1} 张`} onClick={() => removeStaged(p.url)} className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/60">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
+
+          <div className="mx-auto mt-5 w-full max-w-md">
+            {busy ? (
+              <p className="py-4 text-center text-lg">{staged.length > 1 ? `正在一起识别 ${staged.length} 张照片…` : "正在识别食物…"}</p>
+            ) : (
+              <>
+                {error && <p className="mb-3 text-center text-warn">{error}</p>}
+                <button className="btn-primary w-full py-4 text-[17px]" onClick={analyze}>
+                  <Sparkles size={20} />
+                  {staged.length > 1 ? `开始识别（${staged.length} 张）` : "开始识别"}
+                </button>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                  <button className="rounded-2xl bg-white/15 py-3 disabled:opacity-40" disabled={staged.length >= MAX_MEAL_PHOTOS} onClick={() => cameraInput.current?.click()}>
+                    <Camera size={17} className="mx-auto mb-1" />
+                    再拍一张
+                  </button>
+                  <button className="rounded-2xl bg-white/15 py-3 disabled:opacity-40" disabled={staged.length >= MAX_MEAL_PHOTOS} onClick={() => albumInput.current?.click()}>
+                    <Images size={17} className="mx-auto mb-1" />
+                    从相册加
+                  </button>
+                  <button className="rounded-2xl bg-white/15 py-3" onClick={close}>
+                    <X size={17} className="mx-auto mb-1" />
+                    不记了
+                  </button>
+                </div>
+                <p className="mt-3 text-center text-xs text-white/60">
+                  {staged.length >= MAX_MEAL_PHOTOS ? `最多 ${MAX_MEAL_PHOTOS} 张` : "一张拍不全就再拍，会合在一起识别，同一样菜不会算两次"}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </CaptureContext.Provider>

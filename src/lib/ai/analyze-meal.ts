@@ -174,7 +174,7 @@ export async function analyzeMeal(user: User, input: AnalyzeInput): Promise<Meal
   }
   const textParts: string[] = [];
   if (images.length === 1) textParts.push("请估算照片里这顿饭。");
-  if (images.length > 1) textParts.push(`这 ${images.length} 张照片拍的是同一顿饭，请合在一起估算。`);
+  if (images.length > 1) textParts.push(`这 ${images.length} 张照片是同一顿饭连着拍的，请先看完全部，再合在一起估算；同一样食物只算一次。`);
   if (input.text) textParts.push(`用户描述：${input.text}`);
   if (input.answers?.length) {
     textParts.push("用户对补充问题的回答：");

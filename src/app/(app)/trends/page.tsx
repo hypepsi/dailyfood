@@ -12,7 +12,6 @@ import { getDeficitSummary } from "@/services/snapshot";
 import { fatGrams } from "@/lib/energy";
 
 const RANGES = [
-  { key: "7", label: "7天", days: 7 },
   { key: "30", label: "30天", days: 30 },
   { key: "90", label: "90天", days: 90 },
   { key: "all", label: "全部", days: null },
@@ -29,7 +28,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
   const user = await requireUser();
   const today = todayFor(user);
   const query = await searchParams;
-  const range = RANGES.find((r) => r.key === query.range) ?? RANGES[1];
+  const range = RANGES.find((r) => r.key === query.range) ?? RANGES[0];
 
   const allWeights = getDailySeries(user, "weightKg");
   const allBodyFat = getDailySeries(user, "bodyFatPct");
@@ -82,7 +81,7 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
       <div className="mb-3 lg:mb-4">
         <h1 className="page-title mb-3 flex h-11 items-center justify-center">趋势</h1>
 
-        <nav className="grid grid-cols-4 gap-1 rounded-2xl bg-line/60 p-1">
+        <nav className="grid grid-cols-3 gap-1 rounded-2xl bg-line/60 p-1">
           {RANGES.map((r) => (
             <Link
               key={r.key}

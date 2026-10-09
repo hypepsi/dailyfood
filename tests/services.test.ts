@@ -3,7 +3,7 @@ import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { addDays, localDate } from "@/lib/time";
-import { createDraft, createManualMeal, deleteMeal, getDailyTotals, getMeal, getTopFoods, saveMeal, type MealInput } from "@/services/meals";
+import { createDraft, createManualMeal, deleteMeal, getDailyTotals, getMeal, saveMeal, type MealInput } from "@/services/meals";
 import { addMetric, getDailySeries } from "@/services/metrics";
 import { syncPlan } from "@/services/plan";
 import { goalsForDate, setGoals, updateProfile } from "@/services/profile";
@@ -101,19 +101,6 @@ describe("饮食记录", () => {
     expect(getMeal(user, id).title).toBe("乌冬面寿喜锅"); // 改了食物，没给新名称 → 用食物名
     saveMeal(user, id, { ...meal(500), title: "寿喜乌冬", items: [{ ...egg, name: "乌冬面", kcal: 700 }] });
     expect(getMeal(user, id).title).toBe("寿喜乌冬"); // 给了新名称就用它
-  });
-
-  it("热量最高的食物：名字归并、按自己实际吃的那一份算", () => {
-    const item = (name: string, kcal: number, extra: object = {}) => ({ ...egg, name, kcal, ...extra });
-    createManualMeal(user, { ...meal(0), items: [item("水煮鸡蛋（2 个）", 144), item("米饭", 232, { eatenFraction: 0.5 })] });
-    createManualMeal(user, { ...meal(0, 2), items: [item("水煮鸡蛋", 144, { personal: true }), item("红烧肉", 900), item("汤", 60, { eatenFraction: 0 })] });
-    const { foods, totalKcal } = getTopFoods(user, DATE, DATE);
-    expect(foods).toEqual([
-      { name: "红烧肉", kcal: 450, times: 1 }, // 两人合吃，算一半
-      { name: "水煮鸡蛋", kcal: 288, times: 2 }, // 两种叫法归到一起
-      { name: "米饭", kcal: 116, times: 1 }, // 只吃了一半
-    ]); // 一口没喝的汤不出现
-    expect(totalKcal).toBe(854);
   });
 
   it("用户之间的数据互相不可见", () => {

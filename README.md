@@ -18,7 +18,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-Drizzle-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-![Tests](https://img.shields.io/badge/tests-66%20passing-108a6c?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-65%20passing-108a6c?style=flat-square)
 ![PWA](https://img.shields.io/badge/PWA-可安装到桌面-108a6c?style=flat-square)
 ![Mobile](https://img.shields.io/badge/手机优先-单列卡片-108a6c?style=flat-square)
 ![Self hosted](https://img.shields.io/badge/自托管-一台小%20VPS%20就够-108a6c?style=flat-square)
@@ -104,7 +104,7 @@
 上传体脂秤报告截图，体重、体脂率、肌肉量等十几项自动录入。同一天重复上传是覆盖。
 
 ### 📈 趋势
-7 日平均体重（而不是今天比昨天）、每日摄入、每日热量差（吃超的日子向下画）、体脂、腰围。30 / 90 天 / 全部。还有一张「热量主要吃在哪」：这段时间吃进去热量最多的五样食物。
+7 日平均体重（而不是今天比昨天）、每日摄入、每日热量差（吃超的日子向下画）、体脂、腰围。30 / 90 天 / 全部。
 
 ### 📋 7 日 AI 综合分析
 最近 7 个完整的自然日（不含今天）都有记录才能用。AI 通读这一周的全部数据，从热量、蛋白质、热量差、饮食结构、进餐规律、体重、运动、记录质量八个维度逐一判断，给出下周要做的三件事。
@@ -385,7 +385,7 @@ src/
 drizzle/      数据库迁移（自动生成，随代码提交）
 deploy/       systemd 单元、Caddyfile、setup.sh、deploy.sh
 scripts/      create-user · migrate · maintenance
-tests/        10 个测试文件，66 个用例
+tests/        10 个测试文件，65 个用例
 docs/         README 用的截图
 ```
 
@@ -406,7 +406,7 @@ npm run dev                       # http://localhost:3000
 ```
 
 ```bash
-npm test             # 66 个测试
+npm test             # 65 个测试
 npm run typecheck    # 类型检查
 ```
 

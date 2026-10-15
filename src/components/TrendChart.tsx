@@ -96,13 +96,13 @@ export function TrendChart({ kind, from, to, primary, secondary, target, unit, d
             )}
             {hoverPrimary && !diverging && (
               <>
-                {secondary ? `${primary.label} ` : ""}
+                {secondary ? "平均 " : ""}
                 <b>{fmt(hoverPrimary.value)}</b> {unit}
               </>
             )}
             {hoverSecondary && (
               <span className="ml-3">
-                {secondary!.label} <b>{fmt(hoverSecondary.value)}</b> {unit}
+                当次 <b>{fmt(hoverSecondary.value)}</b> {unit}
               </span>
             )}
           </span>

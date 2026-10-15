@@ -103,10 +103,27 @@ export default async function TrendsPage({ searchParams }: { searchParams: Promi
             </Link>
           ) : (
             <>
-              <BigStat label={smooth ? "7日平均" : "最新体重"} value={weightLine.at(-1)!.value.toFixed(smooth ? 1 : 2).replace(/0$/, "")} unit="kg" />
+              <BigStat
+                label={smooth ? "7日平均" : "最新体重"}
+                value={weightLine
+                  .at(-1)!
+                  .value.toFixed(smooth ? 1 : 2)
+                  .replace(/0$/, "")}
+                unit="kg"
+              />
               <div className="mt-2">
                 {smooth ? (
-                  <TrendChart kind="line" {...fit(weights)} unit="kg" digits={1} primary={{ label: "7日平均", points: weightAvg }} secondary={{ label: "当日体重", points: weights }} />
+                  <>
+                    <TrendChart
+                      kind="line"
+                      {...fit(weights)}
+                      unit="kg"
+                      digits={1}
+                      primary={{ label: "线：最近7天平均", points: weightAvg }}
+                      secondary={{ label: "点：每次称的体重", points: weights }}
+                    />
+                    <p className="mt-1 text-xs leading-relaxed text-faint">每天体重会上下波动一两斤，看线的走向比看单个点准</p>
+                  </>
                 ) : (
                   <TrendChart kind="line" {...fit(weights)} unit="kg" digits={2} primary={{ label: "体重", points: weights }} />
                 )}

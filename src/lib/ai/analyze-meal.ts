@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MEAL_TYPES, type MealType, type User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
+import { shortName, shortQuantity } from "@/lib/food-text";
 import { round1 } from "@/lib/nutrition";
 import type { ItemInput } from "@/services/meals";
 import { callModel, type AiContent } from "./client";
@@ -117,8 +118,8 @@ export function normalizeEstimate(raw: unknown): MealEstimate {
     .filter((i) => i.name.trim())
     .slice(0, 30)
     .map((i) => ({
-      name: i.name.trim().slice(0, 60),
-      quantity: i.quantity.trim().slice(0, 30),
+      name: shortName(i.name),
+      quantity: shortQuantity(i.quantity),
       weightG: i.weight_g === null ? null : Math.round(clamp(i.weight_g, 5000)),
       kcal: Math.round(clamp(i.kcal, 10000)),
       proteinG: round1(clamp(i.protein_g, 1000)),

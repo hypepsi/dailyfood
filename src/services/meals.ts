@@ -65,6 +65,21 @@ function titleFor(input: { title: string; items: ItemInput[] }): string {
     .slice(0, 60);
 }
 
+/** 一样东西小于这个热量、而这一餐已经吃过了，就算加餐 */
+const SNACK_KCAL = 400;
+
+/**
+ * 按时间猜的是正餐，但这一餐今天已经记过像样的一顿，而这次只是一点小东西（饭后的冰淇淋、一根香蕉）：
+ * 算加餐，而不是把它并进午饭、晚饭里。用户自己选了餐次或说了是哪一餐时不会走到这里。
+ */
+function guessedType(user: User, date: string, guess: MealType, items: ItemInput[]): MealType {
+  if (guess === "snack") return guess;
+  const kcal = items.reduce((s, i) => s + i.kcal * i.eatenFraction, 0);
+  if (kcal >= SNACK_KCAL) return guess;
+  const alreadyHadMeal = getConfirmedMeals(user, date).some((m) => m.mealType === guess && m.totals.kcal >= 300);
+  return alreadyHadMeal ? "snack" : guess;
+}
+
 /** AI 识别结果先存为草稿，不计入统计，等用户确认 */
 export function createDraft(
   user: User,
@@ -96,7 +111,7 @@ export function createDraft(
         userId: user.id,
         localDate: backdated ?? local.date,
         eatenAt,
-        mealType: draft.mealType ?? (backdated ? "lunch" : guessMealType(local.hour, local.minute)),
+        mealType: draft.mealType ?? (backdated ? "lunch" : guessedType(user, local.date, guessMealType(local.hour, local.minute), draft.items)),
         sharePeople: draft.people ?? 1,
         status: "draft",
         source: draft.source,

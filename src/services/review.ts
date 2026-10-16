@@ -6,6 +6,7 @@ import { currentModel } from "@/lib/ai/client";
 import { writeReview, type Review } from "@/lib/ai/review";
 import { deficitTier, fatGrams } from "@/lib/energy";
 import { AppError } from "@/lib/errors";
+import { log } from "@/lib/logger";
 import { ACTIVITY, PACES, directionOf } from "@/lib/goals";
 import { MEAL_LABELS } from "@/lib/nutrition";
 import { addDays, dateRange, formatDateCn, localParts } from "@/lib/time";
@@ -227,4 +228,35 @@ export async function generateReview(user: User, now = Date.now()): Promise<Stor
       .get();
   });
   return parseStored(row, dataHash);
+}
+
+// ---------- 在后台生成 ----------
+// 一次分析要一分多钟，可能超过反向代理对单个请求的 100 秒限制。
+// 所以点按钮只是“开始”，真正的生成在服务器后台跑，页面每隔几秒问一次好了没有。
+
+// 放在 globalThis 上：接口和页面会被打包成不同的模块，各自的模块级变量互相看不见
+const store = globalThis as unknown as { __lwReviewJobs?: { running: Map<number, Promise<void>>; lastError: Map<number, string> } };
+store.__lwReviewJobs ??= { running: new Map(), lastError: new Map() };
+const { running, lastError } = store.__lwReviewJobs;
+
+export function reviewStatus(userId: number): { running: boolean; error: string | null } {
+  return { running: running.has(userId), error: lastError.get(userId) ?? null };
+}
+
+/** 开始生成；已经在跑就不重复开。窗口不满 7 天时直接报错，不会开始 */
+export function startReview(user: User) {
+  const window = getReviewWindow(user);
+  if (!window.ready) {
+    throw new AppError(409, "not_enough_data", `最近 ${REVIEW_DAYS} 天都有饮食记录才能生成分析，目前 ${window.loggedDays} / ${REVIEW_DAYS} 天`);
+  }
+  if (running.has(user.id)) return;
+  lastError.delete(user.id);
+  const job = generateReview(user)
+    .then(() => undefined)
+    .catch((err) => {
+      lastError.set(user.id, err instanceof AppError ? err.message : "分析没有完成，请再试一次");
+      log.error("weekly review failed", err, { userId: user.id });
+    })
+    .finally(() => running.delete(user.id));
+  running.set(user.id, job);
 }

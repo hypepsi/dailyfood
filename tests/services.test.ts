@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
-import { addDays, localDate } from "@/lib/time";
+import { addDays, localDate, localParts } from "@/lib/time";
 import { createDraft, createManualMeal, deleteMeal, getDailyTotals, getMeal, saveMeal, type MealInput } from "@/services/meals";
 import { addMetric, getDailySeries } from "@/services/metrics";
 import { syncPlan } from "@/services/plan";
@@ -103,6 +103,17 @@ describe("饮食记录", () => {
     expect(getMeal(user, id).title).toBe("寿喜乌冬"); // 给了新名称就用它
   });
 
+  it("饭后的小东西算加餐，不并进正餐", () => {
+    const now = localParts(Date.now(), "Asia/Shanghai");
+    const guess = (kcal: number) => getMeal(user, createDraft(user, { source: "photo", title: "x", items: [{ ...egg, kcal }], aiEstimate: {}, aiModel: "t" })).mealType;
+    const slot = getMeal(user, createDraft(user, { source: "photo", title: "x", items: [{ ...egg, kcal: 600 }], aiEstimate: {}, aiModel: "t" })).mealType;
+    if (slot === "snack") return; // 测试运行的时刻本来就在加餐时段，没有可比较的正餐
+    expect(guess(100)).toBe(slot); // 这一餐还没吃过：照常归到正餐
+    createManualMeal(user, { ...meal(600), date: now.date, time: now.time, mealType: slot });
+    expect(guess(100)).toBe("snack"); // 已经吃过这一餐，再来一根香蕉 → 加餐
+    expect(guess(700)).toBe(slot); // 分量够大，还是算这一餐
+  });
+
   it("用户之间的数据互相不可见", () => {
     const id = createManualMeal(user, meal(700));
     expect(() => getMeal(other, id)).toThrow(AppError);
@@ -149,6 +160,12 @@ describe("目标与身体数据", () => {
     expect(syncPlan(user.id)).toEqual({ calorieTarget: 2350, proteinTargetG: 135 });
     const stored = db.select().from(schema.users).all().find((u) => u.id === user.id)!;
     expect([stored.calorieTarget, stored.proteinTargetG]).toEqual([2350, 135]);
+
+    // 再称一次，基础代谢小降：算出来只差 50 千卡，不改目标，免得来回跳
+    addMetric(user, { date: today, weightKg: 88, bodyFatPct: 25, waistCm: null, muscleKg: null, skeletalMuscleKg: null, visceralFat: null, bmrKcal: 1690, note: null });
+    expect(syncPlan(user.id)).toBeNull();
+    // 用户自己改设置时（force）立刻按最新结果来
+    expect(syncPlan(user.id, { force: true })).toEqual({ calorieTarget: 2300, proteinTargetG: 135 });
   });
 
   it("不能把饮食记到未来", () => {

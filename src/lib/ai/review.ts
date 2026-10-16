@@ -104,7 +104,8 @@ export async function writeReview(user: User, data: string): Promise<Review> {
     jsonSchema: { name: "weekly_review", schema: JSON_SCHEMA },
     effort: "medium",
     maxOutputTokens: 6000,
-    timeoutMs: 90_000,
+    // 在后台跑，不受反向代理 100 秒的限制
+    timeoutMs: 180_000,
   });
   try {
     return normalizeReview(JSON.parse(output));

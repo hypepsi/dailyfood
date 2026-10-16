@@ -5,7 +5,7 @@ import { ReviewRunner } from "@/components/ReviewRunner";
 import { ReviewView } from "@/components/ReviewView";
 import { requireUser } from "@/lib/session";
 import { shortDate } from "@/lib/time";
-import { REVIEW_DAYS, getCurrentReview, getReviewWindow, listPastReviews } from "@/services/review";
+import { REVIEW_DAYS, getCurrentReview, getReviewWindow, listPastReviews, reviewStatus } from "@/services/review";
 
 export default async function ReviewPage() {
   const user = await requireUser();
@@ -47,7 +47,7 @@ export default async function ReviewPage() {
 
         {window.ready && (!current || current.stale) && (
           <div className="mt-4">
-            <ReviewRunner label={current ? "数据有变化，重新分析" : "生成分析"} />
+            <ReviewRunner label={current ? "数据有变化，重新分析" : "生成分析"} initiallyRunning={reviewStatus(user.id).running} />
           </div>
         )}
       </Card>

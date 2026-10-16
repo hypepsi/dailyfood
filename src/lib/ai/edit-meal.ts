@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { User } from "@/db/schema";
 import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
+import { shortName, shortQuantity } from "@/lib/food-text";
 import { round1 } from "@/lib/nutrition";
 import { callModel, type AiContent } from "./client";
 import { MEAL_EDIT, withEstimateStyle } from "./prompts";
@@ -87,11 +88,11 @@ export type MealEdit = {
 const clamp = (n: number, max: number) => Math.min(Math.max(n, 0), max);
 
 function cleanItem(raw: z.infer<typeof itemOutput>): EditedItem | null {
-  const name = raw.name.trim().slice(0, 60);
+  const name = shortName(raw.name);
   if (!name) return null;
   return {
     name,
-    quantity: raw.quantity.trim().slice(0, 30),
+    quantity: shortQuantity(raw.quantity),
     weightG: raw.weight_g === null ? null : Math.round(clamp(raw.weight_g, 5000)),
     kcal: Math.round(clamp(raw.kcal, 10000)),
     proteinG: round1(clamp(raw.protein_g, 1000)),

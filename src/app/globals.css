@@ -68,6 +68,8 @@ html {
   font-size: 15px;
   background: var(--bg);
   color: var(--ink);
+  /* 让浏览器自己的界面（滚动条、系统栏）也跟着深浅色走 */
+  color-scheme: light dark;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;

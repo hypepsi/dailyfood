@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { User } from "@/db/schema";
 import { currentModel } from "@/lib/ai/client";
-import { writeReview, type Review } from "@/lib/ai/review";
+import { fromStored, writeReview, type Review } from "@/lib/ai/review";
 import { deficitTier, fatGrams } from "@/lib/energy";
 import { AppError } from "@/lib/errors";
 import { log } from "@/lib/logger";
@@ -12,7 +12,7 @@ import { MEAL_LABELS } from "@/lib/nutrition";
 import { addDays, dateRange, formatDateCn, localParts } from "@/lib/time";
 import { windowAverage } from "@/lib/weight";
 import { getActivities } from "./activity";
-import { getConfirmedMeals, type MealWithItems } from "./meals";
+import { getConfirmedMeals, getDailyTotals, type MealWithItems } from "./meals";
 import { getDailySeries } from "./metrics";
 import { goalsForDate } from "./profile";
 import { getDeficitSummary, getEnergy, type DeficitDay } from "./snapshot";
@@ -174,7 +174,7 @@ function parseStored(row: typeof weeklyReviews.$inferSelect, currentHash?: strin
     startDate: row.startDate,
     endDate: row.endDate,
     createdAt: row.createdAt,
-    review: JSON.parse(row.content) as Review,
+    review: fromStored(row.content),
     stale: currentHash !== undefined && row.dataHash !== currentHash,
   };
 }
@@ -259,4 +259,36 @@ export function startReview(user: User) {
     })
     .finally(() => running.delete(user.id));
   running.set(user.id, job);
+}
+
+export type ReviewNumbers = {
+  avgIntake: number;
+  /** 平均每天的缺口；资料不全算不出消耗时为 null */
+  avgDeficit: number | null;
+  /** 按这 7 天的缺口，理论上体重该变多少（kg，负数是减） */
+  expectedKg: number | null;
+  /** 这 7 天和前 7 天的平均体重之差；称得不够时为 null */
+  actualKg: number | null;
+};
+
+/** 总结上方那几个数字，全部由程序算，不经过 AI */
+export function reviewNumbers(user: User, window: ReviewWindow, now = Date.now()): ReviewNumbers {
+  const intake = getDailyTotals(user, window.start, window.end);
+  const avgIntake = intake.length ? Math.round(intake.reduce((s, d) => s + d.kcal, 0) / intake.length) : 0;
+  const days = (getDeficitSummary(user, window.end, now)?.days ?? []).filter((d) => d.date >= window.start && d.date <= window.end);
+  const total = days.reduce((s, d) => s + d.deficit, 0);
+  const weights = getDailySeries(user, "weightKg", addDays(window.start, -7), window.end);
+  const thisWeek = weights.filter((w) => w.date >= window.start);
+  const lastWeek = weights.filter((w) => w.date < window.start);
+  // 两边各至少称 2 次才比，否则一两次的波动就会被当成变化
+  const actualKg =
+    thisWeek.length >= 2 && lastWeek.length >= 2
+      ? Math.round((windowAverage(weights, window.end, 7)! - windowAverage(weights, addDays(window.start, -1), 7)!) * 100) / 100
+      : null;
+  return {
+    avgIntake,
+    avgDeficit: days.length ? Math.round(total / days.length) : null,
+    expectedKg: days.length ? Math.round((-total / 7700) * 100) / 100 : null,
+    actualKg,
+  };
 }

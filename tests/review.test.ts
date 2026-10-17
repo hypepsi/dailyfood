@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openDb, schema, setDbForTests, type Db } from "@/db";
 import type { User } from "@/db/schema";
-import { normalizeReview } from "@/lib/ai/review";
+import { fromStored, normalizeReview } from "@/lib/ai/review";
 import { AppError } from "@/lib/errors";
 import { addDays } from "@/lib/time";
 import { setActivity } from "@/services/activity";
@@ -9,20 +9,23 @@ import { createManualMeal } from "@/services/meals";
 import { addMetric } from "@/services/metrics";
 import { generateReview, getReviewWindow, renderReviewData } from "@/services/review";
 
-const dim = (key: string) => ({ key, verdict: "ok", summary: "结论", evidence: "依据" });
-const KEYS = ["calories", "protein", "deficit", "food_quality", "rhythm", "weight", "activity", "logging"];
-const full = { headline: "这周很稳", dimensions: KEYS.map(dim), wins: ["a"], issues: ["b"], next_week: ["1", "2", "3", "4"] };
+const full = { headline: "这周很稳", summary: "吃得接近目标。体重在慢慢降。蛋白质还差一点。", next_steps: ["每天晚饭加一份鸡胸肉", "继续每天称重", "第三条会被丢掉"] };
 
-describe("复盘结果校验", () => {
-  it("八个维度齐全时通过，并按固定顺序排列；行动最多 3 条", () => {
-    const r = normalizeReview({ ...full, dimensions: [...KEYS].reverse().map(dim) });
-    expect(r.dimensions.map((d) => d.key)).toEqual(KEYS);
-    expect(r.nextWeek).toEqual(["1", "2", "3"]);
+describe("总结的校验", () => {
+  it("一句话、几句情况、最多两条下一步", () => {
+    const r = normalizeReview(full);
+    expect(r.headline).toBe("这周很稳");
+    expect(r.nextSteps).toEqual(["每天晚饭加一份鸡胸肉", "继续每天称重"]);
   });
-  it("缺维度、没有总结或没有行动时拒绝", () => {
-    expect(() => normalizeReview({ ...full, dimensions: KEYS.slice(1).map(dim) })).toThrow();
-    expect(() => normalizeReview({ ...full, headline: " " })).toThrow();
-    expect(() => normalizeReview({ ...full, next_week: [] })).toThrow();
+  it("缺总结或没有下一步时拒绝", () => {
+    expect(() => normalizeReview({ ...full, summary: " " })).toThrow();
+    expect(() => normalizeReview({ ...full, next_steps: [] })).toThrow();
+  });
+  it("以前保存的八个方面的分析，换算成现在的样子还能显示", () => {
+    const old = JSON.stringify({ headline: "旧的", dimensions: [], wins: ["做得好。"], issues: ["要改的。"], nextWeek: ["一", "二", "三"] });
+    expect(fromStored(old)).toEqual({ headline: "旧的", summary: "做得好。要改的。", nextSteps: ["一", "二"] });
+    const now = JSON.stringify({ headline: "新的", summary: "情况。", nextSteps: ["一"] });
+    expect(fromStored(now)).toEqual({ headline: "新的", summary: "情况。", nextSteps: ["一"] });
   });
 });
 

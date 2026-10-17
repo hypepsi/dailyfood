@@ -5,7 +5,7 @@ import { ReviewRunner } from "@/components/ReviewRunner";
 import { ReviewView } from "@/components/ReviewView";
 import { requireUser } from "@/lib/session";
 import { shortDate } from "@/lib/time";
-import { REVIEW_DAYS, getCurrentReview, getReviewWindow, listPastReviews, reviewStatus } from "@/services/review";
+import { REVIEW_DAYS, getCurrentReview, getReviewWindow, listPastReviews, reviewNumbers, reviewStatus } from "@/services/review";
 
 export default async function ReviewPage() {
   const user = await requireUser();
@@ -55,7 +55,7 @@ export default async function ReviewPage() {
       {current && !window.ready && (
         <p className="rounded-2xl bg-warn-tint px-4 py-3 text-sm text-warn">下面这份分析是之前生成的；之后有一天的记录被删掉了，补齐后可以重新生成。</p>
       )}
-      {current && <ReviewView review={current.review} />}
+      {current && <ReviewView review={current.review} numbers={window.ready ? reviewNumbers(user, window) : null} />}
 
       {past.length > 0 && (
         <Card icon={History} title="以前的分析">
@@ -69,7 +69,7 @@ export default async function ReviewPage() {
                   <span className="mt-0.5 block font-medium leading-relaxed">{r.review.headline}</span>
                 </summary>
                 <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13px] leading-relaxed text-muted">
-                  {r.review.nextWeek.map((a, i) => (
+                  {r.review.nextSteps.map((a, i) => (
                     <li key={i}>{a}</li>
                   ))}
                 </ol>

@@ -6,3 +6,6 @@ data/
 !.env.example
 *.tsbuildinfo
 next-env.d.ts
+
+# 安卓 APK 由 android/build.sh 生成，不进 Git
+public/download/

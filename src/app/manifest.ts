@@ -9,10 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    // 安卓把这个颜色用在屏幕最下面的系统手势条上，而且装到桌面后就固定了、不跟深色模式变。
-    // 手机平时用深色模式，所以这里用深色，避免底部出现一条白边
-    background_color: "#131514",
-    theme_color: "#131514",
+    background_color: "#f4f1eb",
+    theme_color: "#f4f1eb",
     lang: "zh-CN",
     icons: [
       { src: "/icons/icon-192.png?v=2", sizes: "192x192", type: "image/png" },

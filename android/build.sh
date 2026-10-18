@@ -6,7 +6,9 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 B=/opt/android-build
-OUT=${1:-$HERE/../public/download/shike-mine.apk}
+# 文件名带版本号：同一个网址会被手机浏览器和 Cloudflare 缓存，下载到的可能还是旧的
+VER=$(node -p "require('$HERE/twa-manifest.json').appVersionCode")
+OUT=${1:-$HERE/../public/download/shike-mine-v$VER.apk}
 cp "$HERE/gen.mjs" $B/gen.mjs
 rm -rf $B/project
 node $B/gen.mjs "$HERE/twa-manifest.json" $B/project

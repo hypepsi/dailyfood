@@ -13,6 +13,8 @@ type Capture = {
   /** 直接打开相机；date 只在补记过去某天时传 */
   openCamera: (date?: string) => void;
   openAlbum: (date?: string) => void;
+  /** 底部导航的相机按钮：先问拍照还是从相册选 */
+  openPicker: () => void;
   /** 语音描述吃了什么 */
   openVoice: (date?: string, mealType?: MealType) => void;
 };
@@ -100,15 +102,38 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     targetDate.current = date;
     input.current?.click();
   };
-  const capture: Capture = { openCamera: open(cameraInput), openAlbum: open(albumInput), openVoice: (date, mealType) => setVoice({ date, mealType }) };
+  const [picker, setPicker] = useState(false);
+  const pick = (input: React.RefObject<HTMLInputElement | null>) => () => {
+    setPicker(false);
+    open(input)();
+  };
+  const capture: Capture = { openCamera: open(cameraInput), openAlbum: open(albumInput), openPicker: () => setPicker(true), openVoice: (date, mealType) => setVoice({ date, mealType }) };
 
   return (
     <CaptureContext.Provider value={capture}>
       {children}
-      {/* 不加 capture：加了会直接打开相机，在安卓 App 里就没有“从相册选”的入口了；
-          不加时系统会让用户选拍照还是从相册选 */}
-      <input ref={cameraInput} type="file" accept="image/*" hidden onChange={onChange} data-capture="camera" />
+      <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} data-capture="camera" />
       <input ref={albumInput} type="file" accept="image/*" multiple hidden onChange={onChange} data-capture="album" />
+
+      {picker && (
+        <div data-no-pull className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setPicker(false)}>
+          <div className="mx-auto w-full max-w-md px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <div className="overflow-hidden rounded-3xl bg-card text-[17px] font-semibold shadow-card">
+              <button className="flex w-full items-center justify-center gap-2 py-4" onClick={pick(cameraInput)}>
+                <Camera size={20} className="text-accent" />
+                拍照
+              </button>
+              <button className="flex w-full items-center justify-center gap-2 border-t border-line py-4" onClick={pick(albumInput)}>
+                <Images size={20} className="text-accent" />
+                从相册选
+              </button>
+            </div>
+            <button className="mt-2 w-full rounded-3xl bg-card py-4 text-[17px] font-semibold text-muted shadow-card" onClick={() => setPicker(false)}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
 
       {voice && <VoiceOverlay
           title={`正在听，说说${voice.mealType ? MEAL_LABELS[voice.mealType] : ""}吃了什么`}

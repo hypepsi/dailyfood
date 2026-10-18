@@ -105,7 +105,9 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   return (
     <CaptureContext.Provider value={capture}>
       {children}
-      <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={onChange} data-capture="camera" />
+      {/* 不加 capture：加了会直接打开相机，在安卓 App 里就没有“从相册选”的入口了；
+          不加时系统会让用户选拍照还是从相册选 */}
+      <input ref={cameraInput} type="file" accept="image/*" hidden onChange={onChange} data-capture="camera" />
       <input ref={albumInput} type="file" accept="image/*" multiple hidden onChange={onChange} data-capture="album" />
 
       {voice && <VoiceOverlay

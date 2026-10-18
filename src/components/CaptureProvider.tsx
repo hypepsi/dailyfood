@@ -82,11 +82,14 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       const form = new FormData();
       for (const p of staged) form.append("image", await compressImage(p.file), "meal.jpg");
       if (targetDate.current) form.append("date", targetDate.current);
-      const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form);
+      // 服务器最多处理 120 秒；超过还没回应就别让人一直干等
+      const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form, 130_000);
       router.push(`/meal/${id}`);
       close();
     } catch (err) {
-      setError((err as Error).message);
+      // 有时服务器其实已经识别好了，只是结果没传回手机。刷新首页，那份草稿会显示成「还没确认」
+      router.refresh();
+      setError(`${(err as Error).message}。如果其实已经识别好了，首页会出现「还没确认」的提示，点进去就行`);
       setBusy(false);
     }
   }

@@ -1,13 +1,15 @@
 /** 浏览器端调用后端接口的小工具：统一处理错误提示和登录过期 */
-export async function request<T = unknown>(method: string, url: string, body?: unknown): Promise<T> {
+export async function request<T = unknown>(method: string, url: string, body?: unknown, timeoutMs?: number): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
       method,
       headers: body instanceof FormData || body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body),
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
     });
-  } catch {
+  } catch (err) {
+    if ((err as Error).name === "TimeoutError") throw new Error("等太久没有回应，请再试一次");
     throw new Error("网络连接失败，请检查网络后重试");
   }
   if (res.status === 401 && !url.startsWith("/api/auth/")) {

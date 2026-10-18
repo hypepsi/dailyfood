@@ -44,7 +44,7 @@ export function AppNav() {
         <li className="flex flex-1 justify-center">
           <button
             aria-label="拍一顿"
-            onClick={() => capture.openPicker()}
+            onClick={() => capture.openCamera()}
             className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg ring-4 ring-bg transition duration-200 hover:brightness-110 active:scale-90"
           >
             <Camera size={25} />

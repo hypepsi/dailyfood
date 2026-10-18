@@ -6,7 +6,7 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 B=/opt/android-build
-OUT=${1:-$HERE/../public/download/shike.apk}
+OUT=${1:-$HERE/../public/download/shike-mine.apk}
 cp "$HERE/gen.mjs" $B/gen.mjs
 rm -rf $B/project
 node $B/gen.mjs "$HERE/twa-manifest.json" $B/project

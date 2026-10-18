@@ -1,8 +1,8 @@
 {
-  "packageId": "com.profess0r.shike",
+  "packageId": "com.profess0r.shike.mine",
   "host": "lw.profess0r.com",
-  "name": "食刻 · 饮食记录",
-  "launcherName": "食刻",
+  "name": "我的食刻",
+  "launcherName": "我的食刻",
   "display": "standalone",
   "orientation": "portrait",
   "themeColor": "#F4F1EB",
@@ -17,9 +17,12 @@
   "iconUrl": "https://lw.profess0r.com/icons/icon-512.png?v=2",
   "maskableIconUrl": "https://lw.profess0r.com/icons/icon-maskable-512.png?v=2",
   "splashScreenFadeOutDuration": 300,
-  "signingKey": { "path": "/etc/loseweight/android.keystore", "alias": "shike" },
-  "appVersionCode": 1,
-  "appVersion": "1.0.0",
+  "signingKey": {
+    "path": "/etc/loseweight/android.keystore",
+    "alias": "shike"
+  },
+  "appVersionCode": 2,
+  "appVersion": "1.1.0",
   "fallbackType": "customtabs",
   "enableSiteSettingsShortcut": false,
   "minSdkVersion": 24,

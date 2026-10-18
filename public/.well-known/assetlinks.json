@@ -1,10 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.profess0r.shike",
-      "sha256_cert_fingerprints": ["5C:FF:43:EC:57:A5:9B:F0:63:09:BA:36:C8:BD:AE:9C:FE:0B:94:AB:5D:E8:57:30:E5:BF:95:8D:93:3C:31:03"]
+      "package_name": "com.profess0r.shike.mine",
+      "sha256_cert_fingerprints": [
+        "5C:FF:43:EC:57:A5:9B:F0:63:09:BA:36:C8:BD:AE:9C:FE:0B:94:AB:5D:E8:57:30:E5:BF:95:8D:93:3C:31:03"
+      ]
     }
   }
 ]

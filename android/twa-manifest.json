@@ -21,10 +21,10 @@
     "path": "/etc/loseweight/android.keystore",
     "alias": "shike"
   },
-  "appVersionCode": 2,
-  "appVersion": "1.1.0",
+  "appVersionCode": 4,
+  "appVersion": "1.1.2",
   "fallbackType": "customtabs",
-  "enableSiteSettingsShortcut": false,
+  "enableSiteSettingsShortcut": true,
   "minSdkVersion": 24,
   "webManifestUrl": "https://lw.profess0r.com/manifest.webmanifest"
 }

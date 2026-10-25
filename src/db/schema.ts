@@ -219,6 +219,21 @@ export const dailyAdvice = sqliteTable(
   (t) => [index("daily_advice_user_date_idx").on(t.userId, t.localDate)],
 );
 
+/** 每天的血糖盘点（AI 生成，按当天饮食的哈希缓存） */
+export const glucoseReviews = sqliteTable(
+  "glucose_reviews",
+  {
+    id: id(),
+    userId: userId(),
+    localDate: text("local_date").notNull(),
+    dataHash: text("data_hash").notNull(),
+    /** 模型输出（JSON，已经过程序校验） */
+    content: text("content").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("glucose_reviews_user_date_idx").on(t.userId, t.localDate)],
+);
+
 export const aiUsage = sqliteTable(
   "ai_usage",
   {

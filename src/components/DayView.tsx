@@ -7,10 +7,12 @@ import { getDailyTotals, getPendingDrafts } from "@/services/meals";
 import { getDailySeries, getLatestBodyFat } from "@/services/metrics";
 import { ACTIVITY } from "@/lib/goals";
 import { getActivities } from "@/services/activity";
+import { getStoredGlucose, glucoseStatus } from "@/services/glucose";
 import { getDaySummary, getDeficitSummary, getEnergy, getWeightStats } from "@/services/snapshot";
 import { ActivityCard } from "./ActivityCard";
 import { AdviceCard } from "./AdviceCard";
 import { DeficitCard } from "./DeficitCard";
+import { GlucoseCard } from "./GlucoseCard";
 import { BigStat, Card, ProgressBar, StatRow } from "./Card";
 import { CaptureActions } from "./CaptureActions";
 import { MealList } from "./MealList";
@@ -47,6 +49,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
   const deficit = getDeficitSummary(user, date);
   const activity = getActivities(user, date, date).get(date) ?? null;
   const { energy } = getEnergy(user, today);
+  const glucose = glucoseStatus(day.meals, isToday, Date.now(), user.timezone);
   // 热量卡片的三种颜色（目标本身不变，只是换一种说法和颜色）：
   //   绿：没超过目标
   //   黄：超过了目标，但录了手表、算上当天消耗（基础代谢 + 运动）仍然有缺口
@@ -114,7 +117,7 @@ export function DayView({ user, date, today }: { user: User; date: string; today
         </Link>
       ))}
 
-      {/* 卡片顺序跟着一天里的使用顺序走：先看还能吃多少 → 看 AI 怎么说 → 记录和修正饮食 → 录运动 → 看热量差 → 体重 */}
+      {/* 卡片顺序跟着一天里的使用顺序走：先看还能吃多少 → 看 AI 怎么说 → 记录和修正饮食 → 血糖盘点 → 录运动 → 看热量差 → 体重 */}
 
       <Card icon={Flame} title="热量" action={{ href: "/trends", label: "历史", icon: History }}>
         <BigStat
@@ -159,6 +162,15 @@ export function DayView({ user, date, today }: { user: User; date: string; today
       <Card icon={Utensils} title={isToday ? "今日饮食" : "当日饮食"}>
         <MealList meals={day.meals} date={date} isToday={isToday} timezone={user.timezone} />
       </Card>
+
+      <GlucoseCard
+        key={date}
+        isToday={isToday}
+        ready={glucose.ready}
+        logged={glucose.logged}
+        stored={isToday ? null : getStoredGlucose(user, date)}
+        refreshKey={day.meals.map((m) => `${m.id}:${m.updatedAt}`).join(",")}
+      />
 
       <ActivityCard
         key={`${date}:${activity?.kcal ?? ""}`}

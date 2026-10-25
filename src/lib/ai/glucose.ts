@@ -45,7 +45,7 @@ export function normalizeGlucose(raw: unknown): GlucoseReview {
   const meals = p.meals
     .filter((m) => m.meal.trim())
     .slice(0, 8)
-    .map((m) => ({ meal: m.meal.trim().slice(0, 12), level: m.level, note: m.note.trim().slice(0, 60) }));
+    .map((m) => ({ meal: m.meal.trim().slice(0, 6), level: m.level, note: m.note.trim().slice(0, 60) }));
   if (!summary || tips.length === 0) throw new Error("glucose review is missing summary or tips");
   return { level: p.level, summary, meals, tips };
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Images, Sparkles, X } from "lucide-react";
 import { MAX_MEAL_PHOTOS, type MealType } from "@/db/schema";
 import { request } from "@/lib/client-api";
+import { clientLog } from "@/lib/client-log";
 import { compressImage } from "@/lib/compress-image";
 import { MEAL_LABELS } from "@/lib/nutrition";
 import { VoiceOverlay } from "./VoiceOverlay";
@@ -78,19 +79,58 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   async function analyze() {
     setError("");
     setBusy(true);
+    const started = Date.now();
+    let hidden = 0;
+    const onVisibility = () => document.hidden && hidden++;
+    document.addEventListener("visibilitychange", onVisibility);
+    const controller = new AbortController();
+    let polling: ReturnType<typeof setInterval> | undefined;
+    let pollStart: ReturnType<typeof setTimeout> | undefined;
     try {
       const form = new FormData();
-      for (const p of staged) form.append("image", await compressImage(p.file), "meal.jpg");
+      let bytes = 0;
+      for (const p of staged) {
+        const blob = await compressImage(p.file);
+        bytes += blob.size;
+        form.append("image", blob, "meal.jpg");
+      }
       if (targetDate.current) form.append("date", targetDate.current);
-      // 服务器最多处理 120 秒；超过还没回应就别让人一直干等
-      const { id } = await request<{ id: number }>("POST", "/api/meals/analyze", form, 130_000);
+      clientLog("analyze_start", { photos: staged.length, kb: Math.round(bytes / 1024) });
+
+      // 有时服务器已经识别好了，结果却没传回手机。15 秒后开始顺便查一下有没有新草稿，有就直接跳过去
+      const viaPoll = new Promise<number>((resolve) => {
+        const check = () =>
+          fetch(`/api/meals/latest-draft?since=${started - 5000}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => d?.id && resolve(d.id))
+            .catch(() => {});
+        pollStart = setTimeout(() => {
+          check();
+          polling = setInterval(check, 4000);
+        }, 15_000);
+      });
+      const viaResponse = fetch("/api/meals/analyze", { method: "POST", body: form, signal: controller.signal }).then(async (res) => {
+        const data = await res.json().catch(() => null);
+        clientLog("analyze_response", { status: res.status, ms: Date.now() - started, hidden });
+        if (!res.ok) throw new Error(data?.error?.message || "识别失败，请稍后再试");
+        return data.id as number;
+      });
+      viaResponse.catch(() => {}); // 被上面的查草稿抢先时，这边会被取消，不算错误
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 130_000));
+      const id = await Promise.race([viaResponse, viaPoll.then((id) => (clientLog("analyze_found_by_poll", { ms: Date.now() - started, hidden }), id)), timeout]);
+      controller.abort();
       router.push(`/meal/${id}`);
       close();
     } catch (err) {
-      // 有时服务器其实已经识别好了，只是结果没传回手机。刷新首页，那份草稿会显示成「还没确认」
-      router.refresh();
-      setError(`${(err as Error).message}。如果其实已经识别好了，首页会出现「还没确认」的提示，点进去就行`);
+      const timedOut = (err as Error).message === "timeout";
+      clientLog(timedOut ? "analyze_timeout" : "analyze_error", { ms: Date.now() - started, hidden, message: (err as Error).message.slice(0, 100) });
+      controller.abort();
+      setError(timedOut ? "等太久没有回应，请再试一次" : err instanceof TypeError ? "网络连接失败，请检查网络后重试" : (err as Error).message);
       setBusy(false);
+    } finally {
+      clearTimeout(pollStart);
+      clearInterval(polling);
+      document.removeEventListener("visibilitychange", onVisibility);
     }
   }
 
